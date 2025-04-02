@@ -1463,9 +1463,22 @@
         function switchUserView(userId) {
             console.log("switchUserView: Switching to user", userId); // DEBUG LOG
             clearPendingUndo();
-            state.currentUser = userId;
+            if (state.currentUser === userId && state.currentView === 'user') {
+                console.log("switchUserView: Already viewing this user. No change needed."); // Prevent unnecessary re-renders
+                return;
+            }
+
+            state.currentUser = userId; // Set the new user *before* updating displays
             state.currentView = 'user';
-            updateViewSpecificStyles(); // This saves local state and renders
+
+            // --- Explicitly update header elements based on the NEW currentUser ---
+            console.log("switchUserView: Explicitly updating avatar, name displays for", userId);
+            updateAvatarDisplays();      // Updates all avatars, including the header one
+            updateUserDisplayNames();  // Updates all names, including the header one
+            // updateOverallStreakDisplay(); // This is called by renderHabits, but calling here ensures it's updated even if renderHabits fails? Let's rely on renderHabits for now.
+
+            // Now update styles and render the view, which will call renderHabits -> updateOverallStreakDisplay
+            updateViewSpecificStyles();
         }
         function showCompareView() {
             console.log("showCompareView: Switching to compare view."); // DEBUG LOG
