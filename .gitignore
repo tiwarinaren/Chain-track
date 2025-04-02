@@ -1,0 +1,14 @@
+# Firebase configuration file containing actual keys
+firebase-config.js
+
+# Environment variables file (if used in future build process)
+.env
+
+# Mac system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+
+# Optional: Node modules (if you ever add npm packages)
+# node_modules/
