@@ -21,6 +21,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- Add other Firebase services like auth if needed -->
+
     <style>
         /* Base Styles & Animations */
         :root {
@@ -120,6 +125,9 @@
                 </button>
             </div>
             <div id="pin-error" class="mt-4 text-red-500 dark:text-red-400 text-center hidden text-sm">Incorrect PIN. Try again.</div>
+             <div id="loading-indicator" class="mt-4 text-center text-indigo-500 dark:text-indigo-400 hidden">
+                 <i class="fas fa-spinner fa-spin mr-2"></i> Connecting...
+             </div>
         </div>
     </div>
 
@@ -134,6 +142,9 @@
                         <h1 class="text-xl font-bold text-gray-800 dark:text-gray-100">ChainTrack</h1>
                     </div>
                     <div class="flex items-center space-x-3">
+                         <span id="sync-status" class="text-xs text-gray-400 mr-2 hidden" title="Sync Status">
+                             <i class="fas fa-sync"></i> <span id="sync-status-text">Syncing...</span>
+                         </span>
                         <button id="settings-btn" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition" title="Settings">
                             <i class="fas fa-cog text-lg"></i>
                         </button>
@@ -434,7 +445,7 @@
              <div id="reset-confirm-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-overlay p-4">
                 <div class="modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 max-w-md w-full mx-auto">
                     <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Confirm Reset</h2>
-                    <p class="text-gray-600 dark:text-gray-300 mb-6 text-sm">Are you sure you want to reset the counters (streak chains), best streaks, and notes for <span class="font-bold">all habits</span> for <span class="font-bold">both users</span>? This action cannot be undone.</p>
+                    <p class="text-gray-600 dark:text-gray-300 mb-6 text-sm">Are you sure you want to reset the counters (streak chains), best streaks, and notes for <span class="font-bold">all habits</span> for <span class="font-bold">both users</span>? This action cannot be undone and will sync across devices.</p>
                     <div class="flex justify-end space-x-3">
                         <button id="cancel-reset-btn" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 text-sm font-medium">
                             Cancel
@@ -450,7 +461,7 @@
              <div id="delete-confirm-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-overlay p-4">
                  <div class="modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 max-w-md w-full mx-auto">
                     <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Confirm Deletion</h2>
-                    <p class="text-gray-600 dark:text-gray-300 mb-6 text-sm">Are you sure you want to delete the habit "<span id="delete-habit-name-confirm" class="font-bold"></span>"? This will also remove associated notes and cannot be undone.</p>
+                    <p class="text-gray-600 dark:text-gray-300 mb-6 text-sm">Are you sure you want to delete the habit "<span id="delete-habit-name-confirm" class="font-bold"></span>" for user <span id="delete-habit-user-confirm" class="font-bold"></span>? This will sync across devices and cannot be undone.</p>
                     <div class="flex justify-end space-x-3">
                         <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 text-sm font-medium">
                             Cancel
@@ -466,6 +477,7 @@
              <div id="reset-pin-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-overlay p-4">
                 <div class="modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 max-w-md w-full mx-auto">
                     <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Reset App PIN</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">This PIN is specific to this device/browser and is not synced.</p>
                     <div class="space-y-3">
                         <div>
                             <label for="current-pin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current PIN</label>
@@ -498,21 +510,62 @@
         <div id="notification-area" class="fixed bottom-4 right-4 z-[100] space-y-2 w-full max-w-xs sm:max-w-sm"></div>
 
     </div> <!-- End App Container -->
-
     <script>
+        // --- Firebase Configuration ---
+        // IMPORTANT: Using the config you provided. Ensure this is correct.
+        const firebaseConfig = {
+            apiKey: "AIzaSyDaMPvJU4rO9Qy54jIQj3l0FNQ2RMALXFA", // Replace if necessary, but keep private
+            authDomain: "chaintrack-daa73.firebaseapp.com",
+            databaseURL: "https://chaintrack-daa73-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "chaintrack-daa73",
+            storageBucket: "chaintrack-daa73.appspot.com", // Corrected .appspot.com typical ending
+            messagingSenderId: "105550325208",
+            appId: "1:105550325208:web:c5ba2c7083565aa5c53ead",
+            measurementId: "G-83Q2MZZS1Q" // Optional
+        };
+
+        // --- Initialize Firebase ---
+        let firebaseApp;
+        let db;
+        let dbRef; // Reference to the root of our shared data
+        let dataListener = null; // To keep track of the listener
+        let isSaving = false; // Flag to prevent rapid saves
+        let saveTimeoutId = null; // For debouncing saves
+        let isUpdatingFromRemote = false; // Flag to prevent save loop on remote update
+
+        try {
+            console.log("Attempting to initialize Firebase..."); // DEBUG LOG
+            firebaseApp = firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            dbRef = db.ref('/chainTrackData'); // Path in Firebase where data will be stored
+            console.log("Firebase initialized successfully. DB Ref:", dbRef.toString()); // DEBUG LOG
+        } catch (error) {
+            console.error("Firebase initialization failed:", error); // KEEP THIS
+            alert("Critical Error: Could not connect to the database. Please check your internet connection and Firebase configuration.");
+        }
+
+
         // --- App State ---
-        const state = {
-            currentUser: 'user1',
-            currentView: 'user', // 'user', 'compare'
-            habits: { user1: [], user2: [] }, // Structure: { id, name, chain: [bool], category, bestStreak }
+        const defaultState = {
+            habits: { user1: [], user2: [] },
             userNames: { user1: 'User 1', user2: 'User 2' },
             userAvatars: { user1: '', user2: '' },
-            notes: {}, // { 'userId-habitId-YYYY-MM-DD': 'Note content' }
-            categories: ['General'], // Start with General, loaded/updated from habits
+            notes: {},
+            categories: ['General'],
+            lastTrackedDate: {},
+        };
+
+        // Local state will now hold both synced and local-only data
+        const state = {
+            // Synced parts (will be loaded/saved from/to Firebase)
+            ...JSON.parse(JSON.stringify(defaultState)), // Deep copy default state initially
+
+            // Local-only parts (will use localStorage)
+            currentUser: 'user1',
+            currentView: 'user',
             theme: 'light',
-            lastTrackedDate: {}, // { 'userId-habitId': 'YYYY-MM-DD' }
-            appPin: '9966',
-            pendingUndo: null, // { userId, habitId }
+            appPin: '9966', // PIN remains local to the device
+            pendingUndo: null,
         };
 
         const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzkwYTBhZSI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDRzMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==';
@@ -536,7 +589,7 @@
         let comparisonChart = null;
         let undoTimeoutId = null;
 
-        // --- Utility Functions ---
+        // --- Utility Functions --- (Keep these as they are)
         function stringToColorClass(str) {
              let hash = 0;
              if (!str || str.length === 0) return 'gray';
@@ -570,48 +623,259 @@
         function getTodayDateString() { return new Date().toISOString().split('T')[0]; }
         function hasTrackedToday(userId, habitId) { return state.lastTrackedDate[`${userId}-${habitId}`] === getTodayDateString(); }
 
-        // --- State Management ---
-        function loadState() {
+
+        // --- State Management (Modified for Firebase) ---
+
+        function loadLocalState() {
+            // Load only theme and PIN from localStorage
             state.theme = localStorage.getItem('theme') || 'light';
             state.appPin = localStorage.getItem('appPin') || '9966'; // Load PIN or default
-            try { state.userNames = JSON.parse(localStorage.getItem('userNames') || JSON.stringify(state.userNames)); } catch (e) { console.error("Error loading names", e); }
-            try { state.userAvatars = JSON.parse(localStorage.getItem('userAvatars') || JSON.stringify(state.userAvatars)); } catch (e) { console.error("Error loading avatars", e); }
-            try { state.lastTrackedDate = JSON.parse(localStorage.getItem('lastTrackedDate') || '{}'); } catch (e) { console.error("Error loading dates", e); state.lastTrackedDate = {}; }
-            try { state.notes = JSON.parse(localStorage.getItem('notes') || '{}'); } catch (e) { console.error("Error loading notes", e); state.notes = {}; }
-
-            try {
-                const storedHabits = JSON.parse(localStorage.getItem('habits') || '{}');
-                // Ensure default properties exist, recalculate best streak if needed
-                const processHabit = (h) => ({ ...h, category: h.category || 'General', bestStreak: h.bestStreak || calculateAndUpdateBestStreak(h) });
-                state.habits.user1 = (storedHabits.user1 || []).map(processHabit);
-                state.habits.user2 = (storedHabits.user2 || []).map(processHabit);
-                updateCategoriesFromHabits();
-            } catch (e) {
-                console.error("Failed to load habits:", e);
-                state.habits = { user1: [], user2: [] }; // Reset if invalid
-            }
+            state.currentUser = localStorage.getItem('lastUser') || 'user1'; // Remember last user locally
+            state.currentView = localStorage.getItem('lastView') || 'user'; // Remember last view locally
+            console.log("loadLocalState: Loaded theme, pin, user, view.", state.theme, state.appPin, state.currentUser, state.currentView); // DEBUG LOG
         }
 
-        function saveState() {
-            try {
-                localStorage.setItem('theme', state.theme);
-                localStorage.setItem('appPin', state.appPin);
-                localStorage.setItem('userNames', JSON.stringify(state.userNames));
-                localStorage.setItem('userAvatars', JSON.stringify(state.userAvatars));
-                localStorage.setItem('habits', JSON.stringify(state.habits));
-                localStorage.setItem('lastTrackedDate', JSON.stringify(state.lastTrackedDate));
-                localStorage.setItem('notes', JSON.stringify(state.notes));
-                // console.log("State saved.");
-            } catch (error) {
-                console.error("Error saving state to localStorage:", error);
-                showNotification("Error saving data. Storage might be full.", "error");
-            }
+        function saveLocalState() {
+            // Save only theme, PIN, and UI state to localStorage
+            localStorage.setItem('theme', state.theme);
+            localStorage.setItem('appPin', state.appPin);
+            localStorage.setItem('lastUser', state.currentUser);
+            localStorage.setItem('lastView', state.currentView);
+            console.log("saveLocalState: Saved theme, pin, user, view.", state.theme, state.appPin, state.currentUser, state.currentView); // DEBUG LOG
         }
+
+        function loadSharedStateFromFirebase() {
+             console.log("Attempting to load shared state from Firebase..."); // DEBUG LOG
+             if (!dbRef) {
+                 console.error("loadSharedStateFromFirebase: dbRef is null!"); // DEBUG LOG
+                 return Promise.reject("Firebase not initialized");
+             }
+             getEl('loading-indicator')?.classList.remove('hidden'); // Show loading
+
+             return new Promise((resolve, reject) => {
+                 dbRef.get().then((snapshot) => {
+                    console.log("Firebase snapshot received. Exists:", snapshot.exists()); // DEBUG LOG
+                     if (snapshot.exists()) {
+                         const remoteData = snapshot.val();
+                         console.log("Firebase data raw:", remoteData ? JSON.stringify(remoteData).substring(0, 300) + "..." : "null"); // DEBUG LOG (Truncated)
+                         // Merge remote data with default structure to ensure all keys exist
+                         const mergedState = {
+                             habits: {
+                                 user1: (remoteData?.habits?.user1 || []).map(processHabit).filter(h=>h), // Ensure processHabit and filter nulls
+                                 user2: (remoteData?.habits?.user2 || []).map(processHabit).filter(h=>h)  // Ensure processHabit and filter nulls
+                             },
+                             userNames: remoteData?.userNames || defaultState.userNames,
+                             userAvatars: remoteData?.userAvatars || defaultState.userAvatars,
+                             notes: remoteData?.notes || defaultState.notes,
+                             lastTrackedDate: remoteData?.lastTrackedDate || defaultState.lastTrackedDate
+                         };
+                         // Update the shared parts of the local state object
+                         Object.assign(state, mergedState);
+                         console.log("Local state updated with Firebase data."); // DEBUG LOG
+                     } else {
+                         console.log("No data found in Firebase, using default state."); // DEBUG LOG
+                         // Ensure local state has the default shared structure if nothing in Firebase
+                         Object.assign(state, JSON.parse(JSON.stringify(defaultState)));
+                     }
+                     updateCategoriesFromHabits(); // Update categories based on loaded habits
+                     console.log("Categories updated from loaded habits."); // DEBUG LOG
+                     // Setup the real-time listener AFTER initial load
+                     setupFirebaseListener();
+                     resolve(); // Indicate successful load/setup
+                 }).catch((error) => {
+                     console.error("Error getting data from Firebase:", error); // KEEP THIS
+                     showNotification("Error loading data from cloud.", "error");
+                     reject(error);
+                 }).finally(() => {
+                      getEl('loading-indicator')?.classList.add('hidden'); // Hide loading
+                 });
+             });
+         }
+
+         function setupFirebaseListener() {
+             if (!dbRef) {
+                console.error("setupFirebaseListener: dbRef is null!"); // DEBUG LOG
+                return;
+            }
+             if (dataListener) {
+                dbRef.off('value', dataListener); // Detach previous listener if any
+                console.log("Detached existing Firebase listener."); // DEBUG LOG
+             }
+
+             console.log("Setting up Firebase real-time listener..."); // DEBUG LOG
+             updateSyncStatus("Listening...");
+
+             dataListener = dbRef.on('value', (snapshot) => {
+                 console.log("Firebase listener received data update. isUpdating:", isUpdatingFromRemote, "isSaving:", isSaving); // DEBUG LOG
+                 if (isUpdatingFromRemote || isSaving) {
+                     console.log("Skipping update processing (isUpdatingFromRemote or isSaving is true)."); // DEBUG LOG
+                     return; // Avoid processing updates triggered by this client's own save or during another remote update processing
+                 }
+
+                 isUpdatingFromRemote = true; // Set flag
+                 updateSyncStatus("Updating...");
+
+                 try {
+                     const remoteData = snapshot.val();
+                     if (remoteData) {
+                        console.log("Listener received raw data:", JSON.stringify(remoteData).substring(0, 300) + "..."); // DEBUG LOG
+                         const mergedState = {
+                             habits: {
+                                user1: (remoteData?.habits?.user1 || []).map(processHabit).filter(h=>h), // Ensure processHabit and filter nulls
+                                user2: (remoteData?.habits?.user2 || []).map(processHabit).filter(h=>h)  // Ensure processHabit and filter nulls
+                             },
+                             userNames: remoteData?.userNames || defaultState.userNames,
+                             userAvatars: remoteData?.userAvatars || defaultState.userAvatars,
+                             notes: remoteData?.notes || defaultState.notes,
+                             lastTrackedDate: remoteData?.lastTrackedDate || defaultState.lastTrackedDate
+                         };
+
+                         // Update the shared parts of the local state object
+                         Object.assign(state, mergedState);
+                         console.log("Local state updated by Firebase listener."); // DEBUG LOG
+
+                         // --- Explicitly call UI updates ---
+                         console.log("Listener: Calling UI update functions..."); // DEBUG LOG
+                         updateCategoriesFromHabits();
+                         populateCategoryFilterAndSuggestions();
+                         updateUserDisplayNames();
+                         updateAvatarDisplays();
+                         renderCurrentView(); // This should render habits/dashboard
+                         console.log("Listener: UI update functions called."); // DEBUG LOG
+                         // --- End UI updates ---
+
+                         showNotification("Data synced from other device.", "info", 1500);
+                         updateSyncStatus("Synced");
+                     } else {
+                          console.log("Listener received empty data (perhaps deleted). Resetting shared state locally."); // DEBUG LOG
+                          Object.assign(state, JSON.parse(JSON.stringify(defaultState)));
+                          // --- Explicitly call UI updates after reset ---
+                          console.log("Listener (empty data): Calling UI update functions..."); // DEBUG LOG
+                          updateCategoriesFromHabits();
+                          populateCategoryFilterAndSuggestions();
+                          updateUserDisplayNames();
+                          updateAvatarDisplays();
+                          renderCurrentView();
+                          console.log("Listener (empty data): UI update functions called."); // DEBUG LOG
+                          // --- End UI updates ---
+                          updateSyncStatus("Data cleared remotely");
+                     }
+                 } catch (error) {
+                     console.error("Error processing Firebase update:", error); // KEEP THIS
+                     showNotification("Error applying synced data.", "error");
+                     updateSyncStatus("Error");
+                 } finally {
+                     // Use setTimeout to release the flag slightly later, allowing UI updates to settle
+                     setTimeout(() => {
+                         isUpdatingFromRemote = false;
+                         console.log("Finished processing remote update."); // DEBUG LOG
+                     }, 100); // Adjust delay if needed
+                 }
+             }, (error) => {
+                 console.error("Firebase listener error:", error); // KEEP THIS
+                 showNotification("Database connection error.", "error");
+                 updateSyncStatus("Error");
+             });
+         }
+
+         function updateSyncStatus(statusText) {
+             const statusEl = getEl('sync-status');
+             const textEl = getEl('sync-status-text');
+             if (statusEl && textEl) {
+                 statusEl.classList.remove('hidden');
+                 textEl.textContent = statusText;
+                 // Optional: Change icon/color based on status
+                 const iconEl = statusEl.querySelector('i');
+                 if (statusText === "Synced") {
+                    iconEl.className = 'fas fa-check-circle text-green-500';
+                 } else if (statusText === "Error") {
+                    iconEl.className = 'fas fa-exclamation-circle text-red-500';
+                 } else { // Syncing, Updating, Listening...
+                    iconEl.className = 'fas fa-sync fa-spin text-blue-500';
+                 }
+             }
+         }
+
+        function saveSharedStateToFirebase() {
+            if (!dbRef) {
+                 console.error("Cannot save state: Firebase not initialized."); // DEBUG LOG
+                 showNotification("Error: Cannot save data.", "error");
+                 return;
+            }
+            if (isUpdatingFromRemote) {
+                console.log("Skipping save: Currently processing remote update."); // DEBUG LOG
+                return;
+            }
+
+            // Debounce the save operation
+            clearTimeout(saveTimeoutId);
+            isSaving = true; // Set flag immediately
+            updateSyncStatus("Saving...");
+
+            saveTimeoutId = setTimeout(() => {
+                 console.log("Attempting to save shared state to Firebase..."); // DEBUG LOG
+                 const sharedData = {
+                     habits: state.habits,
+                     userNames: state.userNames,
+                     userAvatars: state.userAvatars,
+                     notes: state.notes,
+                     lastTrackedDate: state.lastTrackedDate,
+                     // Don't save derived state like categories
+                 };
+                 console.log("Data to save:", JSON.stringify(sharedData).substring(0, 200) + "..."); // DEBUG LOG (Truncate for brevity)
+
+
+                 dbRef.set(sharedData)
+                    .then(() => {
+                        console.log("Shared state successfully saved to Firebase."); // DEBUG LOG
+                        updateSyncStatus("Synced");
+                    })
+                    .catch((error) => {
+                        console.error("Error saving state to Firebase:", error); // KEEP THIS
+                        showNotification("Error saving data to cloud.", "error");
+                        updateSyncStatus("Error");
+                    })
+                    .finally(() => {
+                        // Release the flag slightly after the operation completes
+                         setTimeout(() => {
+                             isSaving = false;
+                             console.log("Save operation finished, isSaving set to false."); // DEBUG LOG
+                         }, 100);
+                    });
+            }, 300); // Debounce time in milliseconds (e.g., 300ms)
+        }
+
+        // Helper function to ensure habits have default props (used during loading/updates)
+        function processHabit(h) {
+            if (!h || typeof h !== 'object' || !h.id || !h.name) { // Add more robust check
+                console.warn("Processing invalid habit data:", h); // DEBUG LOG
+                return null; // Handle potential null/undefined/invalid entries
+            }
+            const processed = {
+                id: h.id,
+                name: h.name,
+                chain: Array.isArray(h.chain) ? h.chain : [],
+                category: h.category || 'General',
+                bestStreak: h.bestStreak || 0,
+            };
+            // Ensure bestStreak is calculated if missing or potentially incorrect
+            // Note: Calling calculateAndUpdateBestStreak here modifies the object directly
+            calculateAndUpdateBestStreak(processed);
+            return processed;
+        }
+
 
         function updateCategoriesFromHabits() {
              const categoriesInUse = new Set(['General']);
-             [...(state.habits.user1 || []), ...(state.habits.user2 || [])].forEach(h => { if (h && h.category) categoriesInUse.add(h.category); });
+             // Ensure habits and user arrays exist before iterating
+             const user1Habits = state.habits?.user1 || [];
+             const user2Habits = state.habits?.user2 || [];
+
+             [...user1Habits, ...user2Habits]
+                .filter(h => h) // Filter out any null/undefined habits from processing
+                .forEach(h => { if (h.category) categoriesInUse.add(h.category); });
              state.categories = Array.from(categoriesInUse).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+             console.log("updateCategoriesFromHabits: Updated categories:", state.categories); // DEBUG LOG
          }
 
         // --- UI Update Functions ---
@@ -622,81 +886,138 @@
              toggle.classList.toggle('bg-gray-200', state.theme === 'light');
              toggle.querySelector('span:last-child').classList.toggle('translate-x-5', state.theme === 'dark');
              if (comparisonChart) renderDashboardChart(); // Update chart theme
+             console.log("applyTheme: Theme set to", state.theme); // DEBUG LOG
          }
         function displayQuote() {
              const quote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
              getEl('quote-text').textContent = `"${quote.text}"`; getEl('quote-author').textContent = `- ${quote.author}`;
              getEl('quote-container').style.opacity = 1;
+             console.log("displayQuote: Displayed quote."); // DEBUG LOG
         }
         function updateAvatarDisplays() {
-            const av1 = state.userAvatars.user1 || DEFAULT_AVATAR, av2 = state.userAvatars.user2 || DEFAULT_AVATAR;
+            const av1 = state.userAvatars?.user1 || DEFAULT_AVATAR; // Add safe navigation
+            const av2 = state.userAvatars?.user2 || DEFAULT_AVATAR; // Add safe navigation
             getEl('btn-user1-avatar').src = av1; getEl('btn-user2-avatar').src = av2;
             getEl('dashboard-user1-avatar').src = av1; getEl('dashboard-user2-avatar').src = av2;
             getEl('settings-user1-avatar-preview').src = av1; getEl('settings-user2-avatar-preview').src = av2;
-            getEl('current-user-avatar').src = state.currentUser === 'user1' ? av1 : av2;
+            // Update current user avatar only if user-view is potentially active
+            if (getEl('current-user-avatar')) {
+                 getEl('current-user-avatar').src = state.currentUser === 'user1' ? av1 : av2;
+            }
+            console.log("updateAvatarDisplays: Updated avatar images."); // DEBUG LOG
         }
         function updateUserDisplayNames() {
-            const n1 = state.userNames.user1, n2 = state.userNames.user2;
+            const n1 = state.userNames?.user1 || 'User 1'; // Add safe navigation
+            const n2 = state.userNames?.user2 || 'User 2'; // Add safe navigation
             getEl('btn-user1-name').textContent = n1; getEl('btn-user2-name').textContent = n2;
             getEl('dashboard-user1-name').textContent = n1 + " Stats"; getEl('dashboard-user2-name').textContent = n2 + " Stats";
             getEl('user1-name').value = n1; getEl('user2-name').value = n2;
-            try { getEl('edit-habits-user-select').options[0].text = n1; getEl('edit-habits-user-select').options[1].text = n2; } catch(e) {} // Ignore if element not ready
-            getEl('current-user').textContent = state.userNames[state.currentUser];
+            try { // Keep try-catch for elements that might not exist early
+                 getEl('edit-habits-user-select').options[0].text = n1;
+                 getEl('edit-habits-user-select').options[1].text = n2;
+            } catch(e) {}
+            if (getEl('current-user')) {
+                getEl('current-user').textContent = state.userNames?.[state.currentUser] || (state.currentUser === 'user1' ? 'User 1' : 'User 2');
+            }
+             // Update delete confirmation modal user name span if it exists
+             if (getEl('delete-habit-user-confirm') && getEl('delete-confirm-modal').dataset.habitUser) {
+                 const delUserKey = getEl('delete-confirm-modal').dataset.habitUser;
+                 getEl('delete-habit-user-confirm').textContent = state.userNames?.[delUserKey] || (delUserKey === 'user1' ? 'User 1' : 'User 2');
+             }
+            console.log("updateUserDisplayNames: Updated names:", n1, n2); // DEBUG LOG
         }
         function updateViewSpecificStyles() {
+             console.log("updateViewSpecificStyles: Updating for view:", state.currentView, "user:", state.currentUser); // DEBUG LOG
              const buttons = [getEl('user1-btn'), getEl('user2-btn'), getEl('compare-btn')];
              const activeCls = 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-semibold ring-1 ring-indigo-300 dark:ring-indigo-600';
              const inactiveCls = 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300';
-             const compareActiveCls = activeCls.split(' ').map(c => c.replace('indigo', 'purple'));
+             const compareActiveCls = activeCls.split(' ').map(c => c.replace('indigo', 'purple')).join(' '); // Adjusted to join
 
-             buttons.forEach(btn => btn.className = btn.className.replace(activeCls, '').replace(inactiveCls, '').replace(compareActiveCls.join(' '), '').trim());
+             buttons.forEach(btn => {
+                if(btn) { // Check if button exists
+                    // More robust class removal
+                    btn.classList.remove(...activeCls.split(' '));
+                    btn.classList.remove(...inactiveCls.split(' '));
+                    btn.classList.remove(...compareActiveCls.split(' '));
 
-             if (state.currentView === 'user') {
-                 getEl(state.currentUser === 'user1' ? 'user1-btn' : 'user2-btn').classList.add(...activeCls.split(' '));
-                 getEl(state.currentUser === 'user1' ? 'user2-btn' : 'user1-btn').classList.add(...inactiveCls.split(' '));
-                 getEl('compare-btn').classList.add(...inactiveCls.split(' '));
-             } else if (state.currentView === 'compare') {
-                 getEl('user1-btn').classList.add(...inactiveCls.split(' ')); getEl('user2-btn').classList.add(...inactiveCls.split(' '));
-                 getEl('compare-btn').classList.add(...compareActiveCls);
-             }
+                    if (state.currentView === 'user') {
+                        if (btn.id === (state.currentUser === 'user1' ? 'user1-btn' : 'user2-btn')) {
+                            btn.classList.add(...activeCls.split(' '));
+                        } else {
+                            btn.classList.add(...inactiveCls.split(' '));
+                        }
+                    } else if (state.currentView === 'compare') {
+                         if (btn.id === 'compare-btn') {
+                             btn.classList.add(...compareActiveCls.split(' '));
+                         } else {
+                             btn.classList.add(...inactiveCls.split(' '));
+                         }
+                    }
+                }
+             });
 
+             saveLocalState(); // Save current view/user locally
+             renderCurrentView(); // Render content based on the new state
+         }
+
+        function renderCurrentView() {
+             console.log("renderCurrentView: Rendering view:", state.currentView); // DEBUG LOG
              getEl('user-view').classList.toggle('hidden', state.currentView !== 'user');
              getEl('dashboard-view').classList.toggle('hidden', state.currentView !== 'compare');
 
-             if (state.currentView === 'user') renderHabits();
-             else if (state.currentView === 'compare') renderDashboard();
+             if (state.currentView === 'user') {
+                 renderHabits();
+             } else if (state.currentView === 'compare') {
+                 renderDashboard();
+             }
          }
         function updateOverallStreakDisplay() {
-             const userHabits = state.habits[state.currentUser] || [];
+             // Add safe navigation
+             const userHabits = state.habits?.[state.currentUser] || [];
              if (userHabits.length === 0) { getEl('streak-days').textContent = '0'; getEl('streak-icon').classList.add('hidden'); return; }
-             const bestStreaks = userHabits.map(h => h.bestStreak || 0);
+             const bestStreaks = userHabits.map(h => h?.bestStreak || 0); // Safe navigation
              const overallMaxStreak = Math.max(0, ...bestStreaks);
              getEl('streak-days').textContent = overallMaxStreak;
              getEl('streak-icon').classList.toggle('hidden', overallMaxStreak <= 7);
+             console.log("updateOverallStreakDisplay: Overall max streak for", state.currentUser, "is", overallMaxStreak); // DEBUG LOG
         }
         function populateCategoryFilterAndSuggestions() {
              const select = getEl('category-filter'); const datalist = getEl('category-suggestions');
+             if (!select || !datalist) return; // Ensure elements exist
              const currentVal = select.value; select.innerHTML = '<option value="all">All Categories</option>'; datalist.innerHTML = '';
              state.categories.forEach(cat => { const opt = document.createElement('option'); opt.value = cat; opt.textContent = cat; select.appendChild(opt.cloneNode(true)); datalist.appendChild(opt); });
              select.value = state.categories.includes(currentVal) ? currentVal : 'all'; // Keep selection if valid
+             console.log("populateCategoryFilterAndSuggestions: Populated categories. Current filter:", select.value); // DEBUG LOG
         }
 
         // --- Habit Rendering ---
         function renderHabits() {
+            console.log("renderHabits: Rendering habits for user:", state.currentUser); // DEBUG LOG
             const container = getEl('habits-container');
             const noHabitsMsg = getEl('no-habits-message'); const noFilteredMsg = getEl('no-filtered-habits-message');
-            container.innerHTML = ''; clearPendingUndo();
+            if (!container || !noHabitsMsg || !noFilteredMsg) {
+                console.error("renderHabits: Core elements not found!"); return;
+            }
+            container.innerHTML = '';
+            clearPendingUndo(); // Clear any pending undo state visually
 
-            const userHabits = state.habits[state.currentUser] || [];
+            const userHabits = state.habits?.[state.currentUser] || []; // Safe navigation
             const selectedCategory = getEl('category-filter').value;
-            const filteredHabits = (selectedCategory === 'all') ? userHabits : userHabits.filter(h => h.category === selectedCategory);
+            const filteredHabits = (selectedCategory === 'all')
+                ? userHabits
+                : userHabits.filter(h => h && h.category === selectedCategory); // Add check for h existence
+
+            console.log("renderHabits: Total habits:", userHabits.length, "Filtered habits:", filteredHabits.length, "Category:", selectedCategory); // DEBUG LOG
 
             noHabitsMsg.classList.toggle('hidden', userHabits.length > 0);
-            noFilteredMsg.classList.toggle('hidden', selectedCategory === 'all' || filteredHabits.length > 0 || userHabits.length === 0);
+            noFilteredMsg.classList.toggle('hidden', userHabits.length === 0 || selectedCategory === 'all' || filteredHabits.length > 0);
 
             if (filteredHabits.length > 0) {
                 filteredHabits.forEach((habit, index) => {
-                    if (!habit || !habit.id) return;
+                    if (!habit || !habit.id) { // Extra safety check
+                        console.warn("renderHabits: Skipping invalid habit in loop:", habit);
+                        return;
+                    }
 
                     const card = document.createElement('div');
                     card.className = 'relative habit-card bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4 slide-up border-l-4 border-transparent';
@@ -713,16 +1034,17 @@
 
                     let note = null; let noteTitle = '';
                     if (len > 0 && chain[len - 1]) {
-                         const dateStr = getTodayDateString(); // Note tied to today if last day completed
+                         const dateStr = getTodayDateString();
                          const noteKey = `${state.currentUser}-${habit.id}-${dateStr}`;
-                         note = state.notes[noteKey]; noteTitle = note ? `Note for today: ${note.substring(0, 50)}...` : '';
+                         note = state.notes?.[noteKey]; // Safe navigation
+                         noteTitle = note ? `Note for today: ${note.substring(0, 50)}${note.length > 50 ? '...' : ''}` : '';
                     }
 
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex items-center flex-wrap gap-x-2">
                                 <i class="fas ${icon} habit-icon" style="color: var(${colorVar})"></i>
-                                <h3 class="font-semibold text-lg text-gray-800 dark:text-gray-100">${habit.name}</h3>
+                                <h3 class="font-semibold text-lg text-gray-800 dark:text-gray-100">${habit.name || 'Unnamed'}</h3>
                                 ${note ? `<i class="fas fa-sticky-note text-xs text-yellow-400 cursor-help" title="${noteTitle}"></i>` : ''}
                             </div>
                             <button data-habit-id="${habit.id}" class="track-btn shrink-0 px-3 py-1.5 text-white rounded-lg transition text-xs font-medium flex items-center space-x-1 shadow disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none" ${isTracked ? 'disabled' : ''} style="background-color: var(${colorVar});">
@@ -742,18 +1064,29 @@
                     `;
                     container.appendChild(card);
                 });
+            } else {
+                console.log("renderHabits: No habits to display for this filter/user."); // DEBUG LOG
             }
-            updateOverallStreakDisplay();
+            updateOverallStreakDisplay(); // Update the header streak info
         }
 
         // --- Dashboard Rendering ---
         function renderDashboardStats(userId) {
-            const userHabits = state.habits[userId] || []; const statsEl = getEl(userId === 'user1' ? 'user1-stats' : 'user2-stats');
-            const curStreaks = userHabits.map(h => calculateStreak(h.chain)); const maxCur = Math.max(0, ...curStreaks);
-            const bestStreaks = userHabits.map(h => h.bestStreak || 0); const maxBest = Math.max(0, ...bestStreaks);
-            const rates = userHabits.map(h => calculateCompletionRate(h.chain)); const avgRate = rates.length ? Math.round(rates.reduce((s, r) => s + r, 0) / rates.length) : 0;
-            const totalDone = userHabits.reduce((s, h) => s + (h.chain || []).filter(d => d).length, 0);
-            const totalTracked = userHabits.reduce((s, h) => s + (h.chain || []).length, 0);
+            console.log("renderDashboardStats: Calculating stats for", userId); // DEBUG LOG
+            const userHabits = state.habits?.[userId] || []; // Safe navigation
+            const statsEl = getEl(userId === 'user1' ? 'user1-stats' : 'user2-stats');
+            if (!statsEl) return;
+
+            const curStreaks = userHabits.map(h => calculateStreak(h?.chain)); // Safe navigation
+            const maxCur = Math.max(0, ...curStreaks);
+            const bestStreaks = userHabits.map(h => h?.bestStreak || 0); // Safe navigation
+            const maxBest = Math.max(0, ...bestStreaks);
+            const rates = userHabits.map(h => calculateCompletionRate(h?.chain)); // Safe navigation
+            const validRates = rates.filter(r => !isNaN(r)); // Filter out NaN if chain was empty/invalid
+            const avgRate = validRates.length ? Math.round(validRates.reduce((s, r) => s + r, 0) / validRates.length) : 0;
+            const totalDone = userHabits.reduce((s, h) => s + (h?.chain || []).filter(d => d).length, 0); // Safe navigation
+            const totalTracked = userHabits.reduce((s, h) => s + (h?.chain || []).length, 0); // Safe navigation
+
             statsEl.innerHTML = `
                 <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Habits:</span><strong class="dark:text-gray-100">${userHabits.length}</strong></div>
                 <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Longest Current:</span><strong class="dark:text-gray-100">${maxCur} ${maxCur > 7 ? '<i class="fas fa-fire text-orange-500 streak-fire"></i>' : ''}</strong></div>
@@ -763,49 +1096,169 @@
                 <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Days Tracked:</span><strong class="dark:text-gray-100">${totalTracked}</strong></div>`;
         }
         function renderDashboardChart() {
-             const user1Habits = state.habits.user1 || []; const user2Habits = state.habits.user2 || [];
-             const shared = []; const names = new Set([...user1Habits.map(h => h.name), ...user2Habits.map(h => h.name)]);
-             names.forEach(name => { const h1 = user1Habits.find(h => h.name === name), h2 = user2Habits.find(h => h.name === name); const s1 = h1 ? calculateStreak(h1.chain) : 0, s2 = h2 ? calculateStreak(h2.chain) : 0; if (s1 > 0 || s2 > 0) shared.push({ name, s1, s2 }); });
-             const canvas = getEl('streakComparisonChart'); const msg = getEl('no-comparison-data'); const ctx = canvas.getContext('2d');
+             console.log("renderDashboardChart: Preparing chart data."); // DEBUG LOG
+             const user1Habits = state.habits?.user1 || []; // Safe navigation
+             const user2Habits = state.habits?.user2 || []; // Safe navigation
+             const shared = [];
+             // Use Set to get unique names, handling potential null/undefined habits
+             const names = new Set([...user1Habits.filter(h=>h?.name).map(h => h.name), ...user2Habits.filter(h=>h?.name).map(h => h.name)]);
+
+             names.forEach(name => {
+                 const h1 = user1Habits.find(h => h?.name === name);
+                 const h2 = user2Habits.find(h => h?.name === name);
+                 const s1 = h1 ? calculateStreak(h1.chain) : 0;
+                 const s2 = h2 ? calculateStreak(h2.chain) : 0;
+                 if (s1 > 0 || s2 > 0) shared.push({ name, s1, s2 });
+            });
+             console.log("renderDashboardChart: Shared habits with streaks > 0:", shared.length); // DEBUG LOG
+
+             const canvas = getEl('streakComparisonChart'); const msg = getEl('no-comparison-data'); const ctx = canvas?.getContext('2d'); // Safe navigation
+             if (!canvas || !msg || !ctx) {
+                 console.error("renderDashboardChart: Canvas elements not found."); return;
+             }
+
              if (comparisonChart) { comparisonChart.destroy(); comparisonChart = null; }
-             msg.classList.toggle('hidden', shared.length > 0); canvas.classList.toggle('hidden', shared.length === 0);
+
+             msg.classList.toggle('hidden', shared.length > 0);
+             canvas.classList.toggle('hidden', shared.length === 0);
+             getEl('comparison-chart-container').classList.toggle('hidden', shared.length === 0); // Toggle container visibility
+
              if (shared.length === 0) return;
+
              comparisonChart = new Chart(ctx, {
                  type: 'bar',
-                 data: { labels: shared.map(h => h.name), datasets: [ { label: state.userNames.user1, data: shared.map(h => h.s1), backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: 'rgba(99, 102, 241, 1)', borderWidth: 1 }, { label: state.userNames.user2, data: shared.map(h => h.s2), backgroundColor: 'rgba(34, 197, 94, 0.7)', borderColor: 'rgba(34, 197, 94, 1)', borderWidth: 1 } ] },
-                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: 'Current Streak (Days)' }, grid: { color: state.theme === 'dark' ? '#30363d' : 'rgba(0,0,0,0.1)' }, ticks: { color: state.theme === 'dark' ? '#bdc6cf' : '#374151' } }, x: { grid: { display: false }, ticks: { color: state.theme === 'dark' ? '#bdc6cf' : '#374151' } } }, plugins: { legend: { labels: { color: state.theme === 'dark' ? '#bdc6cf' : '#374151' } }, tooltip: { mode: 'index', intersect: false } } }
+                 data: {
+                     labels: shared.map(h => h.name),
+                     datasets: [
+                         { label: state.userNames?.user1 || 'User 1', data: shared.map(h => h.s1), backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: 'rgba(99, 102, 241, 1)', borderWidth: 1 }, // Safe name access
+                         { label: state.userNames?.user2 || 'User 2', data: shared.map(h => h.s2), backgroundColor: 'rgba(34, 197, 94, 0.7)', borderColor: 'rgba(34, 197, 94, 1)', borderWidth: 1 }  // Safe name access
+                    ]
+                 },
+                 options: {
+                     responsive: true, maintainAspectRatio: false,
+                     scales: {
+                         y: { beginAtZero: true, title: { display: true, text: 'Current Streak (Days)' }, grid: { color: state.theme === 'dark' ? '#30363d' : 'rgba(0,0,0,0.1)' }, ticks: { color: state.theme === 'dark' ? '#bdc6cf' : '#374151' } },
+                         x: { grid: { display: false }, ticks: { color: state.theme === 'dark' ? '#bdc6cf' : '#374151' } }
+                     },
+                     plugins: { legend: { labels: { color: state.theme === 'dark' ? '#bdc6cf' : '#374151' } }, tooltip: { mode: 'index', intersect: false } }
+                 }
              });
+             console.log("renderDashboardChart: Chart rendered."); // DEBUG LOG
          }
-        function renderDashboard() { updateAvatarDisplays(); renderDashboardStats('user1'); renderDashboardStats('user2'); renderDashboardChart(); getEl('comparison-chart-container').classList.toggle('hidden', !comparisonChart); }
+        function renderDashboard() {
+            console.log("renderDashboard: Rendering dashboard view."); // DEBUG LOG
+            updateAvatarDisplays(); // Ensure avatars are up-to-date
+            renderDashboardStats('user1');
+            renderDashboardStats('user2');
+            renderDashboardChart();
+        }
 
         // --- Modal Functions ---
-        function openModal(el) { el.classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
-        function closeModal(el) { el.classList.add('hidden'); document.body.style.overflow = ''; }
+        function openModal(el) { if(el) el.classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+        function closeModal(el) { if(el) el.classList.add('hidden'); document.body.style.overflow = ''; }
+
         function openEditHabitsModal() {
-             const list = getEl('edit-habits-list'); list.innerHTML = ''; const user = getEl('edit-habits-user-select').value; const habits = state.habits[user] || [];
-             if (habits.length === 0) { list.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400 py-4">No habits found.</p>`; }
-             else {
-                 habits.sort((a, b) => a.name.localeCompare(b.name)).forEach(h => { if (!h) return; const s = calculateStreak(h.chain); const b = h.bestStreak || 0; const cN = stringToColorClass(h.category || 'General'); const cV = `--color-${cN}-500`; const btn = document.createElement('button'); btn.className = `w-full text-left bg-gray-50 dark:bg-gray-800 p-3 rounded-lg shadow-sm cursor-pointer border-l-4 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-offset-1 ring-offset-white dark:ring-offset-gray-900 focus:ring-${cN}-500`; btn.style.borderLeftColor = `var(${cV}, #6b7280)`; btn.dataset.habitId = h.id; btn.innerHTML = `<div class="flex justify-between items-center"><div><h4 class="font-medium text-gray-800 dark:text-gray-100">${h.name}</h4><span class="text-xs text-gray-500 dark:text-gray-400">${h.category || 'General'}</span></div><span class="text-xs font-mono text-gray-600 dark:text-gray-300">Curr:${s}/Best:${b}</span></div>`; btn.onclick = () => { openEditHabitModal(h.id, user); closeModal(getEl('edit-habits-modal')); }; list.appendChild(btn); });
+             console.log("openEditHabitsModal: Opening modal."); // DEBUG LOG
+             const list = getEl('edit-habits-list');
+             const userSelect = getEl('edit-habits-user-select');
+             if (!list || !userSelect) return;
+
+             list.innerHTML = '';
+             const user = userSelect.value;
+             const habits = state.habits?.[user] || []; // Safe navigation
+
+             console.log("openEditHabitsModal: Editing habits for", user, "Count:", habits.length); // DEBUG LOG
+
+             if (habits.length === 0) {
+                 list.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400 py-4">No habits found for ${state.userNames?.[user] || user}.</p>`; // Safe name access
+             } else {
+                 habits
+                    .filter(h => h) // Ensure habit exists
+                    .sort((a, b) => (a.name || '').localeCompare(b.name || '')) // Safe name access
+                    .forEach(h => {
+                        const s = calculateStreak(h.chain); const b = h.bestStreak || 0;
+                        const cN = stringToColorClass(h.category || 'General'); const cV = `--color-${cN}-500`;
+                        const btn = document.createElement('button');
+                        btn.className = `w-full text-left bg-gray-50 dark:bg-gray-800 p-3 rounded-lg shadow-sm cursor-pointer border-l-4 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-offset-1 ring-offset-white dark:ring-offset-gray-900 focus:ring-${cN}-500`;
+                        btn.style.borderLeftColor = `var(${cV}, #6b7280)`;
+                        btn.dataset.habitId = h.id;
+                        btn.innerHTML = `<div class="flex justify-between items-center"><div><h4 class="font-medium text-gray-800 dark:text-gray-100">${h.name || 'Unnamed'}</h4><span class="text-xs text-gray-500 dark:text-gray-400">${h.category || 'General'}</span></div><span class="text-xs font-mono text-gray-600 dark:text-gray-300">Curr:${s}/Best:${b}</span></div>`;
+                        btn.onclick = () => {
+                            console.log("openEditHabitsModal: Edit button clicked for habit", h.id); // DEBUG LOG
+                            openEditHabitModal(h.id, user);
+                            closeModal(getEl('edit-habits-modal'));
+                        };
+                        list.appendChild(btn);
+                 });
              }
              openModal(getEl('edit-habits-modal'));
         }
         function openEditHabitModal(habitId, user) {
-             const userKey = user || state.currentUser; const idx = state.habits[userKey]?.findIndex(h => h && h.id === habitId); if (idx === -1) { showNotification("Habit not found.", 'error'); return; }
-             const h = state.habits[userKey][idx]; const modal = getEl('edit-habit-modal');
-             getEl('edit-habit-name').value = h.name; getEl('edit-habit-category').value = h.category || '';
-             modal.dataset.habitId = h.id; modal.dataset.habitUser = userKey;
+             console.log("openEditHabitModal: Opening modal for habit", habitId, "user", user); // DEBUG LOG
+             const userKey = user || state.currentUser;
+             // Find index safely
+             const idx = state.habits?.[userKey]?.findIndex(h => h?.id === habitId); // Safe navigation
+
+             if (idx === undefined || idx === -1) {
+                 console.error("openEditHabitModal: Habit not found.", habitId, userKey); // DEBUG LOG
+                 showNotification("Habit not found.", 'error');
+                 return;
+             }
+
+             const h = state.habits[userKey][idx];
+             const modal = getEl('edit-habit-modal');
+             if (!modal) return;
+
+             getEl('edit-habit-name').value = h.name || '';
+             getEl('edit-habit-category').value = h.category || '';
+             modal.dataset.habitId = h.id;
+             modal.dataset.habitUser = userKey;
+
              const chain = h.chain || []; let note = ''; let noteDate = '';
-             if (chain.length > 0) { const dateStr = getTodayDateString(); noteKey = `${userKey}-${h.id}-${dateStr}`; note = state.notes[noteKey] || ''; noteDate = dateStr; } // Simplified: Note always for today
-             getEl('edit-habit-note').value = note; modal.dataset.noteDate = noteDate;
-             renderEditChainContainer(chain); openModal(modal);
+             // Simplified: Note always tied to today for editing, might need refinement if history is needed
+             const dateStr = getTodayDateString();
+             const noteKey = `${userKey}-${h.id}-${dateStr}`;
+             note = state.notes?.[noteKey] || ''; // Safe navigation
+             noteDate = dateStr;
+
+             getEl('edit-habit-note').value = note;
+             modal.dataset.noteDate = noteDate; // Store the date the note applies to
+
+             renderEditChainContainer(chain);
+             openModal(modal);
         }
         function renderEditChainContainer(chain) {
-             const cont = getEl('edit-chain-container'); cont.innerHTML = ''; if (!Array.isArray(chain)) return;
-             chain.forEach((day, idx) => { const btn = document.createElement('button'); btn.className = `w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition ${day ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'}`; btn.textContent = idx + 1; btn.type = 'button'; btn.title = `Day ${idx + 1}`; btn.dataset.index = idx; btn.onclick = () => { const current = JSON.parse(cont.dataset.currentChain || '[]'); current[idx] = !current[idx]; cont.dataset.currentChain = JSON.stringify(current); renderEditChainContainer(current); }; cont.appendChild(btn); });
-             cont.dataset.currentChain = JSON.stringify(chain);
+             console.log("renderEditChainContainer: Rendering chain length:", chain?.length || 0); // DEBUG LOG
+             const cont = getEl('edit-chain-container');
+             if (!cont) return;
+             cont.innerHTML = '';
+             if (!Array.isArray(chain)) return;
+
+             chain.forEach((day, idx) => {
+                 const btn = document.createElement('button');
+                 btn.className = `w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition ${day ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'}`;
+                 btn.textContent = idx + 1;
+                 btn.type = 'button';
+                 btn.title = `Day ${idx + 1}`;
+                 btn.dataset.index = idx;
+                 btn.onclick = () => {
+                     const currentChainData = cont.dataset.currentChain;
+                     try {
+                        const current = JSON.parse(currentChainData || '[]');
+                        current[idx] = !current[idx];
+                        cont.dataset.currentChain = JSON.stringify(current);
+                        renderEditChainContainer(current); // Re-render to reflect change
+                     } catch (e) {
+                         console.error("renderEditChainContainer: Error parsing or updating chain data:", e); // DEBUG LOG
+                         cont.dataset.currentChain = JSON.stringify(chain); // Reset to original if error
+                     }
+                 };
+                 cont.appendChild(btn);
+             });
+             cont.dataset.currentChain = JSON.stringify(chain); // Store the current state as JSON string
         }
 
-        // --- Notifications ---
+        // --- Notifications --- (Unchanged)
         function showNotification(message, type = 'info', duration = 3000) {
              const area = getEl('notification-area'); if (!area) return; const notif = document.createElement('div');
              const typeClasses = { success: 'bg-green-500 border-green-600', error: 'bg-red-500 border-red-600', info: 'bg-blue-500 border-blue-600', warning: 'bg-yellow-500 border-yellow-600 text-black' };
@@ -818,38 +1271,87 @@
 
         // --- Undo Functionality ---
         function showUndo(userId, habitId) {
-             clearPendingUndo(); const card = queryEl(`.habit-card[data-habit-id='${habitId}'][data-user-id='${userId}']`); if (!card) return; const btn = card.querySelector('.undo-button'); if (!btn) return;
-             state.pendingUndo = { userId, habitId }; btn.classList.add('visible');
+             console.log("showUndo: Displaying undo for user", userId, "habit", habitId); // DEBUG LOG
+             clearPendingUndo(); // Clear any previous one
+             const card = queryEl(`.habit-card[data-habit-id='${habitId}'][data-user-id='${userId}']`);
+             if (!card) { console.warn("showUndo: Card not found for undo."); return; } // DEBUG LOG
+             const btn = card.querySelector('.undo-button');
+             if (!btn) { console.warn("showUndo: Undo button not found in card."); return; } // DEBUG LOG
+
+             state.pendingUndo = { userId, habitId };
+             btn.classList.add('visible');
+             // Clear undo after a timeout
              undoTimeoutId = setTimeout(clearPendingUndo, 5000);
         }
         function handleUndoClick(event) {
-             event?.stopPropagation(); if (!state.pendingUndo) return; const { userId, habitId } = state.pendingUndo; const idx = state.habits[userId]?.findIndex(h => h && h.id === habitId);
-             if (idx !== -1) { const h = state.habits[userId][idx]; if (Array.isArray(h.chain) && h.chain.length > 0) { h.chain.pop(); const today = getTodayDateString(); const key = `${userId}-${habitId}`; if (state.lastTrackedDate[key] === today) delete state.lastTrackedDate[key]; calculateAndUpdateBestStreak(h); saveState(); renderHabits(); showNotification('Last action undone.', 'info'); } }
-             clearPendingUndo();
+             event?.stopPropagation();
+             if (!state.pendingUndo) { console.log("handleUndoClick: No pending undo."); return; } // DEBUG LOG
+
+             const { userId, habitId } = state.pendingUndo;
+             console.log("handleUndoClick: Undoing action for user", userId, "habit", habitId); // DEBUG LOG
+
+             // Find index safely
+             const idx = state.habits?.[userId]?.findIndex(h => h?.id === habitId); // Safe navigation
+
+             if (idx !== undefined && idx !== -1) {
+                 const h = state.habits[userId][idx];
+                 if (Array.isArray(h.chain) && h.chain.length > 0) {
+                     h.chain.pop(); // Remove the last entry (assumes it was 'true')
+                     const today = getTodayDateString();
+                     const key = `${userId}-${habitId}`;
+                     // Only remove lastTrackedDate if it was for today
+                     if (state.lastTrackedDate?.[key] === today) { // Safe navigation
+                         delete state.lastTrackedDate[key];
+                     }
+                     calculateAndUpdateBestStreak(h); // Recalculate best streak
+                     console.log("handleUndoClick: Calling saveSharedStateToFirebase"); // DEBUG LOG
+                     saveSharedStateToFirebase(); // Save the modified state
+                     renderHabits(); // Update UI immediately
+                     showNotification('Last tracking action undone.', 'info');
+                 } else {
+                     console.warn("handleUndoClick: Habit chain is empty or invalid, cannot undo."); // DEBUG LOG
+                 }
+             } else {
+                  console.warn("handleUndoClick: Habit not found for undo:", habitId, userId); // DEBUG LOG
+             }
+             clearPendingUndo(); // Clear the undo state
         }
         function clearPendingUndo() {
              if (undoTimeoutId) { clearTimeout(undoTimeoutId); undoTimeoutId = null; }
-             if (state.pendingUndo) { const { userId, habitId } = state.pendingUndo; const card = queryEl(`.habit-card[data-habit-id='${habitId}'][data-user-id='${userId}']`); if (card) { const btn = card.querySelector('.undo-button'); if (btn) btn.classList.remove('visible'); } state.pendingUndo = null; }
-        }
+             if (state.pendingUndo) {
+                 const { userId, habitId } = state.pendingUndo;
+                 const card = queryEl(`.habit-card[data-habit-id='${habitId}'][data-user-id='${userId}']`);
+                 if (card) {
+                     const btn = card.querySelector('.undo-button');
+                     if (btn) btn.classList.remove('visible');
+                 }
+                 console.log("clearPendingUndo: Cleared undo state for user", userId, "habit", habitId); // DEBUG LOG
+                 state.pendingUndo = null;
+             }
+         }
 
         // --- Initialization ---
         function initApp() {
-            // loadState() is called before setupEventListeners in DOMContentLoaded
+            console.log("initApp: Initializing application UI."); // DEBUG LOG
+            loadLocalState(); // Load theme, pin, last view/user first
             applyTheme();
             displayQuote();
+            // Update displays based on loaded state *before* rendering the main view
             updateUserDisplayNames();
             updateAvatarDisplays();
+            updateCategoriesFromHabits(); // Ensure categories are ready based on loaded state
             populateCategoryFilterAndSuggestions();
 
-            state.currentView = 'user';
-            state.currentUser = (state.habits.user1?.length ?? 0) >= (state.habits.user2?.length ?? 0) ? 'user1' : 'user2';
-            updateViewSpecificStyles(); // Renders initial view
+            // Render the view based on last known local state or default
+            console.log("initApp: Calling updateViewSpecificStyles"); // DEBUG LOG
+            updateViewSpecificStyles(); // This calls renderCurrentView
 
-            showNotification(`Welcome back!`, 'success', 2000);
+            showNotification(`Welcome back! Data synced.`, 'success', 2000);
         }
 
-        // --- Event Handlers Setup ---
+        // --- Event Handlers Setup --- (Unchanged structure)
         function setupEventListeners() {
+            console.log("setupEventListeners: Setting up event listeners."); // DEBUG LOG
             // Login & Header
             getEl('login-btn').addEventListener('click', handleLogin);
             getEl('pin-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') handleLogin(); });
@@ -868,7 +1370,7 @@
             getEl('cancel-habit-btn').addEventListener('click', () => { getEl('add-habit-form').classList.add('hidden'); getEl('new-habit-name').value = ''; getEl('new-habit-category').value = ''; });
             getEl('save-habit-btn').addEventListener('click', handleSaveNewHabit);
             getEl('new-habit-name').addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSaveNewHabit(); });
-            getEl('category-filter').addEventListener('change', renderHabits);
+            getEl('category-filter').addEventListener('change', renderHabits); // Re-render locally on filter change
 
             // Habits Container (Delegated)
             getEl('habits-container').addEventListener('click', handleHabitCardClick);
@@ -889,101 +1391,417 @@
             getEl('edit-habits-user-select').addEventListener('change', openEditHabitsModal);
             getEl('cancel-edit-habits-btn').addEventListener('click', () => closeModal(getEl('edit-habits-modal')));
             getEl('save-edit-habit-btn').addEventListener('click', handleSaveEditedHabit);
-            getEl('reset-habit-btn').addEventListener('click', handleResetSingleHabit);
-            getEl('delete-habit-btn').addEventListener('click', handleDeleteHabit);
+            getEl('reset-habit-btn').addEventListener('click', handleResetSingleHabit); // Doesn't save immediately
+            getEl('delete-habit-btn').addEventListener('click', handleDeleteHabit); // Opens confirmation
             getEl('cancel-edit-habit-btn').addEventListener('click', () => closeModal(getEl('edit-habit-modal')));
-            getEl('confirm-reset-btn').addEventListener('click', handleConfirmResetAll);
+            getEl('confirm-reset-btn').addEventListener('click', handleConfirmResetAll); // Saves changes
             getEl('cancel-reset-btn').addEventListener('click', () => closeModal(getEl('reset-confirm-modal')));
-            getEl('confirm-delete-btn').addEventListener('click', handleConfirmDeleteHabit);
+            getEl('confirm-delete-btn').addEventListener('click', handleConfirmDeleteHabit); // Saves changes
             getEl('cancel-delete-btn').addEventListener('click', () => closeModal(getEl('delete-confirm-modal')));
-            getEl('confirm-reset-pin-btn').addEventListener('click', handleConfirmResetPin);
+            getEl('confirm-reset-pin-btn').addEventListener('click', handleConfirmResetPin); // Saves only local PIN
             getEl('cancel-reset-pin-btn').addEventListener('click', () => closeModal(getEl('reset-pin-modal')));
-            [getEl('current-pin'), getEl('new-pin'), getEl('confirm-new-pin')].forEach(input => { input.addEventListener('input', () => { if (input.value.length > 4) input.value = input.value.slice(0, 4); }); input.addEventListener('keypress', (e) => { if (!/\d/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) e.preventDefault(); }); });
+            [getEl('current-pin'), getEl('new-pin'), getEl('confirm-new-pin')].forEach(input => { input?.addEventListener('input', () => { if (input.value.length > 4) input.value = input.value.slice(0, 4); }); input?.addEventListener('keypress', (e) => { if (!/\d/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) e.preventDefault(); }); }); // Added safe navigation
 
             setupModalAndSettingsClosers(); // Generic closers
+             console.log("setupEventListeners: All listeners attached."); // DEBUG LOG
         }
 
         function setupModalAndSettingsClosers() {
              queryAllEl('.modal-overlay').forEach(modal => { modal.addEventListener('click', (e) => { if (e.target === modal) { const cb = modal.querySelector('[id^="cancel-"]'); if (cb) cb.click(); else closeModal(modal); } }); });
              document.addEventListener('click', (e) => { const p = getEl('settings-panel'), b = getEl('settings-btn'); if (!p || !b) return; if (p.classList.contains('open') && !p.contains(e.target) && !b.contains(e.target)) p.classList.remove('open'); });
+             console.log("setupModalAndSettingsClosers: Generic modal/settings closers attached."); // DEBUG LOG
         }
 
-        // --- Event Handlers ---
+        // --- Event Handlers (Modified to trigger saves) ---
         function handleLogin() {
-            if (getEl('pin-input').value === state.appPin) {
+            console.log("handleLogin: Attempting login."); // DEBUG LOG
+            const pinInput = getEl('pin-input').value;
+            if (pinInput === state.appPin) {
                 getEl('pin-error').classList.add('hidden');
-                anime({ targets: getEl('login-container'), scale: 0.9, opacity: 0, duration: 300, easing: 'easeInOutQuad',
-                    complete: () => { getEl('login-screen').classList.add('opacity-0', 'pointer-events-none'); setTimeout(() => { getEl('login-screen').classList.add('hidden'); getEl('app-container').classList.remove('hidden'); initApp(); }, 300); } });
-            } else { getEl('pin-error').classList.remove('hidden'); anime({ targets: getEl('login-container'), translateX: [{ value: -6 }, { value: 6 }, { value: -4 }, { value: 4 }, { value: 0 }], duration: 300, easing: 'easeInOutSine' }); }
+                // Load shared state *after* PIN is verified
+                loadSharedStateFromFirebase().then(() => {
+                    // Only proceed if Firebase load was successful
+                    console.log("handleLogin: Firebase load successful, proceeding to show app."); // DEBUG LOG
+                    anime({ targets: getEl('login-container'), scale: 0.9, opacity: 0, duration: 300, easing: 'easeInOutQuad',
+                        complete: () => { getEl('login-screen').classList.add('opacity-0', 'pointer-events-none'); setTimeout(() => { getEl('login-screen').classList.add('hidden'); getEl('app-container').classList.remove('hidden'); initApp(); }, 300); } });
+                }).catch(err => {
+                    console.error("handleLogin: Firebase load failed.", err); // DEBUG LOG
+                    showNotification("Failed to load cloud data. Check connection.", "error");
+                    getEl('pin-error').textContent = "Login failed: Could not load data.";
+                    getEl('pin-error').classList.remove('hidden');
+                });
+
+            } else {
+                console.log("handleLogin: Incorrect PIN entered."); // DEBUG LOG
+                getEl('pin-error').textContent = "Incorrect PIN. Try again."; // More specific error
+                getEl('pin-error').classList.remove('hidden');
+                anime({ targets: getEl('login-container'), translateX: [{ value: -6 }, { value: 6 }, { value: -4 }, { value: 4 }, { value: 0 }], duration: 300, easing: 'easeInOutSine' });
+            }
         }
-        function handleLogout() { if (!confirm("Log out?")) return; getEl('app-container').classList.add('hidden'); getEl('login-screen').classList.remove('hidden', 'opacity-0', 'pointer-events-none'); getEl('pin-input').value = ''; getEl('pin-error').classList.add('hidden'); anime({ targets: getEl('login-container'), scale: [0.95, 1], opacity: [0, 1], duration: 300, easing: 'easeOutQuad' }); }
-        function toggleTheme() { state.theme = (state.theme === 'light') ? 'dark' : 'light'; applyTheme(); saveState(); }
-        function switchUserView(userId) { clearPendingUndo(); state.currentUser = userId; state.currentView = 'user'; updateUserDisplayNames(); updateAvatarDisplays(); updateViewSpecificStyles(); }
-        function showCompareView() { clearPendingUndo(); state.currentView = 'compare'; updateViewSpecificStyles(); }
+        function handleLogout() {
+            console.log("handleLogout: Logging out."); // DEBUG LOG
+            if (!confirm("Log out? This will clear the connection.")) return;
+            // Detach Firebase listener on logout
+            if (dbRef && dataListener) {
+                dbRef.off('value', dataListener);
+                dataListener = null;
+                console.log("Detached Firebase listener on logout."); // DEBUG LOG
+            }
+            // Reset local state parts potentially? Or just show login
+            getEl('app-container').classList.add('hidden');
+            getEl('login-screen').classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+            getEl('pin-input').value = '';
+            getEl('pin-error').classList.add('hidden');
+            anime({ targets: getEl('login-container'), scale: [0.95, 1], opacity: [0, 1], duration: 300, easing: 'easeOutQuad' });
+        }
+        function toggleTheme() {
+             state.theme = (state.theme === 'light') ? 'dark' : 'light';
+             console.log("toggleTheme: Toggling theme to", state.theme); // DEBUG LOG
+             applyTheme();
+             saveLocalState(); // Theme is local
+        }
+        function switchUserView(userId) {
+            console.log("switchUserView: Switching to user", userId); // DEBUG LOG
+            clearPendingUndo();
+            state.currentUser = userId;
+            state.currentView = 'user';
+            updateViewSpecificStyles(); // This saves local state and renders
+        }
+        function showCompareView() {
+            console.log("showCompareView: Switching to compare view."); // DEBUG LOG
+            clearPendingUndo();
+            state.currentView = 'compare';
+            updateViewSpecificStyles(); // This saves local state and renders
+        }
 
         function handleSaveNewHabit() {
+            console.log("handleSaveNewHabit: Fired!"); // DEBUG LOG
             const nameInput = getEl('new-habit-name'); const catInput = getEl('new-habit-category');
             const name = nameInput.value.trim(); let cat = catInput.value.trim() || 'General';
+
             if (!name) { showNotification("Habit name required.", 'warning'); return; }
-            const habits = state.habits[state.currentUser]; if (habits.some(h => h.name.toLowerCase() === name.toLowerCase())) { showNotification(`Habit "${name}" already exists.`, 'warning'); return; }
+
+            // Ensure user's habit array exists
+            if (!state.habits[state.currentUser]) {
+                state.habits[state.currentUser] = [];
+                console.log("handleSaveNewHabit: Initialized habit array for user", state.currentUser); // DEBUG LOG
+            }
+
+            const habits = state.habits[state.currentUser];
+            if (habits.some(h => h && h.name.toLowerCase() === name.toLowerCase())) { // Add check for h existence
+                showNotification(`Habit "${name}" already exists.`, 'warning');
+                return;
+            }
+
             const newHabit = { id: Date.now(), name, chain: [], category: cat, bestStreak: 0 };
-            habits.push(newHabit); updateCategoriesFromHabits(); populateCategoryFilterAndSuggestions(); saveState(); renderHabits();
+            console.log("handleSaveNewHabit: Adding new habit:", newHabit); // DEBUG LOG
+            state.habits[state.currentUser].push(newHabit); // Add to local state
+
+            updateCategoriesFromHabits();
+            populateCategoryFilterAndSuggestions();
+            console.log("handleSaveNewHabit: Calling saveSharedStateToFirebase"); // DEBUG LOG
+            saveSharedStateToFirebase(); // <-- Save the updated state
+            renderHabits(); // Update UI immediately
             nameInput.value = ''; catInput.value = ''; getEl('add-habit-form').classList.add('hidden');
             showNotification(`Habit "${name}" added!`, 'success');
-            const card = queryEl(`.habit-card[data-habit-id="${newHabit.id}"]`); if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); try { anime({ targets: card, backgroundColor: state.theme === 'dark' ? ['#1f2937', '#161b22'] : ['#ecfdf5', '#ffffff'], duration: 1500 }); } catch(e){} }
+
+            // Scroll and highlight animation (keep try-catch)
+            try {
+                const card = queryEl(`.habit-card[data-habit-id="${newHabit.id}"]`);
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    anime({ targets: card, backgroundColor: state.theme === 'dark' ? ['#1f2937', '#161b22'] : ['#ecfdf5', '#ffffff'], duration: 1500 });
+                 }
+            } catch(e) { console.warn("handleSaveNewHabit: Animation failed.", e); }
         }
         function handleHabitCardClick(event) {
-            const trackBtn = event.target.closest('.track-btn'); const undoBtn = event.target.closest('.undo-button');
-            if (undoBtn && state.pendingUndo && parseInt(undoBtn.dataset.habitId) === state.pendingUndo.habitId) { handleUndoClick(event); return; }
+            const trackBtn = event.target.closest('.track-btn');
+            const undoBtn = event.target.closest('.undo-button');
+
+            if (undoBtn && state.pendingUndo && parseInt(undoBtn.dataset.habitId) === state.pendingUndo.habitId) {
+                console.log("handleHabitCardClick: Undo button clicked."); // DEBUG LOG
+                handleUndoClick(event); // handleUndoClick now saves
+                return;
+            }
             if (trackBtn && !trackBtn.disabled) {
-                clearPendingUndo(); const habitId = parseInt(trackBtn.dataset.habitId); const userId = state.currentUser; const idx = state.habits[userId]?.findIndex(h => h?.id === habitId); if (idx === -1) return;
-                if (hasTrackedToday(userId, habitId)) return;
-                const h = state.habits[userId][idx]; if (!Array.isArray(h.chain)) h.chain = [];
-                const oldStreak = calculateStreak(h.chain); // Calculate before adding
-                h.chain.push(true); // Add day
-                const newStreak = oldStreak + 1; // New current streak
-                h.bestStreak = Math.max(h.bestStreak || 0, newStreak); // Update best if needed
+                console.log("handleHabitCardClick: Track button clicked for habit", trackBtn.dataset.habitId); // DEBUG LOG
+                clearPendingUndo();
+                const habitId = parseInt(trackBtn.dataset.habitId);
+                const userId = state.currentUser;
+                // Find index safely
+                const idx = state.habits?.[userId]?.findIndex(h => h?.id === habitId); // Safe navigation
+
+                if (idx === undefined || idx === -1) {
+                    console.error("handleHabitCardClick: Habit not found for tracking:", habitId, userId); // DEBUG LOG
+                    return;
+                }
+                if (hasTrackedToday(userId, habitId)) {
+                    console.log("handleHabitCardClick: Already tracked today."); // DEBUG LOG
+                    return;
+                }
+
+                const h = state.habits[userId][idx];
+                if (!Array.isArray(h.chain)) h.chain = []; // Ensure chain is an array
+
+                const oldStreak = calculateStreak(h.chain);
+                h.chain.push(true);
+                const newStreak = oldStreak + 1;
+                h.bestStreak = Math.max(h.bestStreak || 0, newStreak);
+
+                // Ensure lastTrackedDate object exists
+                if (!state.lastTrackedDate) state.lastTrackedDate = {};
                 state.lastTrackedDate[`${userId}-${habitId}`] = getTodayDateString();
-                saveState(); showUndo(userId, habitId); renderHabits();
-                if (typeof confetti === 'function') { const r = trackBtn.getBoundingClientRect(); confetti({ particleCount: 50, spread: 50, origin: { x: (r.left + r.width / 2) / window.innerWidth, y: (r.top + r.height / 2) / window.innerHeight }, zIndex: 50 }); }
+
+                console.log("handleHabitCardClick: Calling saveSharedStateToFirebase"); // DEBUG LOG
+                saveSharedStateToFirebase(); // <-- Save the updated state
+                showUndo(userId, habitId); // Show undo locally
+                renderHabits(); // Update UI immediately
+
+                // Confetti animation (keep try-catch)
+                try {
+                    if (typeof confetti === 'function') {
+                        const r = trackBtn.getBoundingClientRect();
+                        confetti({ particleCount: 50, spread: 50, origin: { x: (r.left + r.width / 2) / window.innerWidth, y: (r.top + r.height / 2) / window.innerHeight }, zIndex: 50 });
+                     }
+                } catch(e) { console.warn("handleHabitCardClick: Confetti failed.", e); }
             }
         }
         function handleAvatarUpload(event, userKey) {
-            const file = event.target.files[0]; const preview = getEl(userKey === 'user1' ? 'settings-user1-avatar-preview' : 'settings-user2-avatar-preview');
-            if (file && file.type.startsWith('image/')) { if (file.size > 2097152) { showNotification("Max 2MB image size.", 'warning'); event.target.value = ''; return; } const reader = new FileReader(); reader.onload = (e) => { state.userAvatars[userKey] = e.target.result; preview.src = e.target.result; }; reader.onerror = () => showNotification("Error reading image.", 'error'); reader.readAsDataURL(file); } else if (file) { showNotification("Invalid image file.", 'warning'); event.target.value = ''; }
+            console.log("handleAvatarUpload: File selected for", userKey); // DEBUG LOG
+            const file = event.target.files[0];
+            const preview = getEl(userKey === 'user1' ? 'settings-user1-avatar-preview' : 'settings-user2-avatar-preview');
+            if (!preview) return;
+
+            if (file && file.type.startsWith('image/')) {
+                if (file.size > 2097152) { // 2MB limit
+                     showNotification("Max 2MB image size.", 'warning');
+                     event.target.value = ''; return;
+                 }
+                 const reader = new FileReader();
+                 reader.onload = (e) => {
+                     console.log("handleAvatarUpload: Image loaded for", userKey); // DEBUG LOG
+                     // Ensure userAvatars object exists
+                     if (!state.userAvatars) state.userAvatars = { user1: '', user2: '' };
+                     state.userAvatars[userKey] = e.target.result;
+                     preview.src = e.target.result;
+                     // Don't save here, wait for Save Profiles button
+                 };
+                 reader.onerror = () => {
+                    console.error("handleAvatarUpload: Error reading image file."); // DEBUG LOG
+                    showNotification("Error reading image.", 'error');
+                 };
+                 reader.readAsDataURL(file);
+            } else if (file) {
+                 console.log("handleAvatarUpload: Invalid file type selected."); // DEBUG LOG
+                 showNotification("Invalid image file.", 'warning');
+                 event.target.value = ''; // Clear the input
+            }
         }
-        function handleSaveUserProfiles() { state.userNames.user1 = getEl('user1-name').value.trim() || 'User 1'; state.userNames.user2 = getEl('user2-name').value.trim() || 'User 2'; saveState(); updateUserDisplayNames(); updateAvatarDisplays(); if (state.currentView === 'compare') renderDashboard(); if (state.currentView === 'user') renderHabits(); showNotification('Profiles saved!', 'success'); getEl('settings-panel').classList.remove('open'); }
+        function handleSaveUserProfiles() {
+            console.log("handleSaveUserProfiles: Fired!"); // DEBUG LOG
+            // Ensure userNames object exists
+            if (!state.userNames) state.userNames = { user1: 'User 1', user2: 'User 2' };
+            state.userNames.user1 = getEl('user1-name').value.trim() || 'User 1';
+            state.userNames.user2 = getEl('user2-name').value.trim() || 'User 2';
+            // Avatars should already be updated in state by handleAvatarUpload
+
+            console.log("handleSaveUserProfiles: Calling saveSharedStateToFirebase"); // DEBUG LOG
+            saveSharedStateToFirebase(); // <-- Save the updated state
+            updateUserDisplayNames(); // Update UI
+            updateAvatarDisplays();   // Update UI
+            // Re-render current view to reflect potential name changes in dashboard/habit list
+            renderCurrentView();
+            showNotification('Profiles saved!', 'success');
+            getEl('settings-panel').classList.remove('open');
+        }
         function handleSaveEditedHabit() {
-             const modal = getEl('edit-habit-modal'); const id = parseInt(modal.dataset.habitId); const user = modal.dataset.habitUser; const idx = state.habits[user]?.findIndex(h => h?.id === id); if (idx === -1) { showNotification("Error saving.", 'error'); closeModal(modal); return; }
-             const name = getEl('edit-habit-name').value.trim(); let cat = getEl('edit-habit-category').value.trim() || 'General'; const chain = JSON.parse(getEl('edit-chain-container').dataset.currentChain || '[]'); const note = getEl('edit-habit-note').value.trim(); const noteDate = modal.dataset.noteDate;
+             console.log("handleSaveEditedHabit: Fired!"); // DEBUG LOG
+             const modal = getEl('edit-habit-modal');
+             if (!modal || !modal.dataset.habitId || !modal.dataset.habitUser) {
+                 console.error("handleSaveEditedHabit: Modal data missing."); return;
+             }
+             const id = parseInt(modal.dataset.habitId); const user = modal.dataset.habitUser;
+             // Find index safely
+             const idx = state.habits?.[user]?.findIndex(h => h?.id === id); // Safe navigation
+
+             if (idx === undefined || idx === -1) {
+                 console.error("handleSaveEditedHabit: Habit not found for saving:", id, user); // DEBUG LOG
+                 showNotification("Error saving.", 'error');
+                 closeModal(modal); return;
+             }
+
+             const name = getEl('edit-habit-name').value.trim(); let cat = getEl('edit-habit-category').value.trim() || 'General';
+             const chainContainer = getEl('edit-chain-container');
+             let chain = [];
+             try {
+                 chain = JSON.parse(chainContainer?.dataset?.currentChain || '[]'); // Safe navigation & parsing
+             } catch (e) {
+                 console.error("handleSaveEditedHabit: Failed to parse chain data from modal:", e); // DEBUG LOG
+                 showNotification("Error saving chain data.", 'error');
+                 return; // Don't save if chain data is corrupted
+             }
+
+             const note = getEl('edit-habit-note').value.trim();
+             const noteDate = modal.dataset.noteDate; // Get the date the note applies to
+
              if (!name) { showNotification("Name required.", 'warning'); return; }
-             if (state.habits[user].some(h => h && h.id !== id && h.name.toLowerCase() === name.toLowerCase())) { showNotification(`"${name}" already exists.`, 'warning'); return; }
-             const h = state.habits[user][idx]; h.name = name; h.category = cat; h.chain = chain; h.bestStreak = calculateAndUpdateBestStreak(h);
-             if (noteDate) { const key = `${user}-${id}-${noteDate}`; if (note) state.notes[key] = note; else delete state.notes[key]; } else { getEl('edit-habit-note').value = ''; } // Clear note field if no date
-             updateCategoriesFromHabits(); populateCategoryFilterAndSuggestions(); saveState(); closeModal(modal); updateViewSpecificStyles(); showNotification(`"${name}" updated.`, 'success');
+
+             // Check for duplicate name (excluding the current habit)
+             if (state.habits[user].some(h => h && h.id !== id && h.name.toLowerCase() === name.toLowerCase())) { // Add check for h existence
+                 showNotification(`"${name}" already exists for this user.`, 'warning');
+                 return;
+             }
+
+             const h = state.habits[user][idx];
+             h.name = name; h.category = cat; h.chain = chain;
+             calculateAndUpdateBestStreak(h); // Recalculate best streak
+
+             // Ensure notes object exists
+             if (!state.notes) state.notes = {};
+             if (noteDate) {
+                 const key = `${user}-${id}-${noteDate}`;
+                 if (note) {
+                     state.notes[key] = note;
+                     console.log("handleSaveEditedHabit: Saving note for key:", key); // DEBUG LOG
+                 } else {
+                     delete state.notes[key]; // Remove note if empty
+                     console.log("handleSaveEditedHabit: Deleting note for key:", key); // DEBUG LOG
+                 }
+             } else {
+                 // Should not happen if noteDate is set correctly, but good practice
+                 getEl('edit-habit-note').value = '';
+             }
+
+             updateCategoriesFromHabits();
+             populateCategoryFilterAndSuggestions();
+             console.log("handleSaveEditedHabit: Calling saveSharedStateToFirebase"); // DEBUG LOG
+             saveSharedStateToFirebase(); // <-- Save the updated state
+             closeModal(modal);
+             renderCurrentView(); // Update UI
+             showNotification(`"${name}" updated.`, 'success');
         }
-        function handleResetSingleHabit() { if (!confirm("Reset chain for this habit?")) return; const modal = getEl('edit-habit-modal'); const chain = []; renderEditChainContainer(chain); getEl('edit-chain-container').dataset.currentChain = JSON.stringify(chain); showNotification('Chain reset in editor. Save to confirm.', 'info'); }
-        function handleDeleteHabit() { const modal = getEl('edit-habit-modal'); const id = parseInt(modal.dataset.habitId); const user = modal.dataset.habitUser; const idx = state.habits[user]?.findIndex(h => h?.id === id); if (idx === -1) return; getEl('delete-habit-name-confirm').textContent = state.habits[user][idx].name; getEl('delete-confirm-modal').dataset.habitId = id; getEl('delete-confirm-modal').dataset.habitUser = user; closeModal(modal); openModal(getEl('delete-confirm-modal')); }
-        function handleConfirmDeleteHabit() { const modal = getEl('delete-confirm-modal'); const id = parseInt(modal.dataset.habitId); const user = modal.dataset.habitUser; if (state.habits[user]) state.habits[user] = state.habits[user].filter(h => h?.id !== id); Object.keys(state.notes).filter(k => k.startsWith(`${user}-${id}-`)).forEach(k => delete state.notes[k]); updateCategoriesFromHabits(); populateCategoryFilterAndSuggestions(); saveState(); closeModal(modal); updateViewSpecificStyles(); showNotification("Habit deleted.", 'success'); }
-        function handleConfirmResetAll() { Object.keys(state.habits).forEach(user => { if (Array.isArray(state.habits[user])) state.habits[user].forEach(h => { if (h) { h.chain = []; h.bestStreak = 0; } }); }); state.lastTrackedDate = {}; state.notes = {}; saveState(); closeModal(getEl('reset-confirm-modal')); updateViewSpecificStyles(); showNotification("All data reset.", 'success'); }
-        function handleConfirmResetPin() { const cur = getEl('current-pin').value; const n1 = getEl('new-pin').value; const n2 = getEl('confirm-new-pin').value; const err = getEl('reset-pin-error'); err.classList.add('hidden'); if (cur !== state.appPin) { err.textContent = 'Current PIN incorrect.'; err.classList.remove('hidden'); return; } if (!/^\d{4}$/.test(n1)) { err.textContent = 'New PIN must be 4 digits.'; err.classList.remove('hidden'); return; } if (n1 === cur) { err.textContent = 'New PIN must be different.'; err.classList.remove('hidden'); return; } if (n1 !== n2) { err.textContent = 'New PINs do not match.'; err.classList.remove('hidden'); return; } state.appPin = n1; saveState(); closeModal(getEl('reset-pin-modal')); showNotification("PIN changed!", 'success'); }
+        function handleResetSingleHabit() {
+            console.log("handleResetSingleHabit: Resetting chain in editor."); // DEBUG LOG
+            if (!confirm("Reset chain for this habit? Changes apply only after saving.")) return;
+            const modal = getEl('edit-habit-modal');
+            const chain = [];
+            renderEditChainContainer(chain); // Update editor UI
+            // Update the dataset directly so save picks it up
+            const chainContainer = getEl('edit-chain-container');
+            if (chainContainer) chainContainer.dataset.currentChain = JSON.stringify(chain);
+            showNotification('Chain reset in editor. Save changes to confirm.', 'info');
+        }
+        function handleDeleteHabit() {
+             console.log("handleDeleteHabit: Opening confirmation."); // DEBUG LOG
+             const modal = getEl('edit-habit-modal');
+             if (!modal || !modal.dataset.habitId || !modal.dataset.habitUser) {
+                 console.error("handleDeleteHabit: Modal data missing."); return;
+             }
+             const id = parseInt(modal.dataset.habitId); const user = modal.dataset.habitUser;
+             // Find index safely
+             const idx = state.habits?.[user]?.findIndex(h => h?.id === id); // Safe navigation
+
+             if (idx === undefined || idx === -1) {
+                 console.error("handleDeleteHabit: Habit not found for deletion:", id, user); // DEBUG LOG
+                 return;
+             }
+             getEl('delete-habit-name-confirm').textContent = state.habits[user][idx].name || 'Unnamed';
+             getEl('delete-habit-user-confirm').textContent = state.userNames?.[user] || user; // Safe navigation
+             getEl('delete-confirm-modal').dataset.habitId = id;
+             getEl('delete-confirm-modal').dataset.habitUser = user;
+             closeModal(modal);
+             openModal(getEl('delete-confirm-modal'));
+        }
+        function handleConfirmDeleteHabit() {
+            console.log("handleConfirmDeleteHabit: Fired!"); // DEBUG LOG
+            const modal = getEl('delete-confirm-modal');
+            if (!modal || !modal.dataset.habitId || !modal.dataset.habitUser) {
+                 console.error("handleConfirmDeleteHabit: Confirmation modal data missing."); return;
+             }
+            const id = parseInt(modal.dataset.habitId); const user = modal.dataset.habitUser;
+
+            // Ensure user habits array exists and filter
+            if (state.habits?.[user]) { // Safe navigation
+                console.log("handleConfirmDeleteHabit: Deleting habit", id, "for user", user); // DEBUG LOG
+                state.habits[user] = state.habits[user].filter(h => h?.id !== id); // Safe navigation in filter
+            }
+
+            // Also remove associated notes, ensure notes object exists
+            if (state.notes) {
+                Object.keys(state.notes).filter(k => k.startsWith(`${user}-${id}-`)).forEach(k => {
+                    console.log("handleConfirmDeleteHabit: Deleting note", k); // DEBUG LOG
+                    delete state.notes[k];
+                });
+            }
+            // Remove associated lastTrackedDate entry, ensure object exists
+            if (state.lastTrackedDate) {
+                const trackKey = `${user}-${id}`;
+                if (state.lastTrackedDate[trackKey]) {
+                    console.log("handleConfirmDeleteHabit: Deleting lastTrackedDate for", trackKey); // DEBUG LOG
+                    delete state.lastTrackedDate[trackKey];
+                }
+            }
+
+            updateCategoriesFromHabits();
+            populateCategoryFilterAndSuggestions();
+            console.log("handleConfirmDeleteHabit: Calling saveSharedStateToFirebase"); // DEBUG LOG
+            saveSharedStateToFirebase(); // <-- Save the updated state
+            closeModal(modal);
+            renderCurrentView(); // Update UI
+            showNotification("Habit deleted.", 'success');
+        }
+        function handleConfirmResetAll() {
+             console.log("handleConfirmResetAll: Fired!"); // DEBUG LOG
+             // Reset shared state parts
+             state.habits = { user1: [], user2: [] };
+             state.notes = {};
+             state.lastTrackedDate = {};
+             state.categories = ['General']; // Reset categories derived from habits
+
+             // Reset locally derived best streaks in UI (if applicable)
+             getEl('streak-days').textContent = '0';
+             getEl('streak-icon').classList.add('hidden');
+
+             console.log("handleConfirmResetAll: Calling saveSharedStateToFirebase"); // DEBUG LOG
+             saveSharedStateToFirebase(); // <-- Save the reset state
+             closeModal(getEl('reset-confirm-modal'));
+             // Update UI based on reset state
+             updateCategoriesFromHabits();
+             populateCategoryFilterAndSuggestions();
+             renderCurrentView();
+             showNotification("All shared data reset and synced.", 'success');
+        }
+        function handleConfirmResetPin() {
+            console.log("handleConfirmResetPin: Fired!"); // DEBUG LOG
+            const cur = getEl('current-pin').value; const n1 = getEl('new-pin').value; const n2 = getEl('confirm-new-pin').value; const err = getEl('reset-pin-error'); err.classList.add('hidden');
+            if (cur !== state.appPin) { err.textContent = 'Current PIN incorrect.'; err.classList.remove('hidden'); return; }
+            if (!/^\d{4}$/.test(n1)) { err.textContent = 'New PIN must be 4 digits.'; err.classList.remove('hidden'); return; }
+            if (n1 === cur) { err.textContent = 'New PIN must be different.'; err.classList.remove('hidden'); return; }
+            if (n1 !== n2) { err.textContent = 'New PINs do not match.'; err.classList.remove('hidden'); return; }
+            state.appPin = n1;
+            console.log("handleConfirmResetPin: Saving new local PIN."); // DEBUG LOG
+            saveLocalState(); // <-- Save the new local PIN
+            closeModal(getEl('reset-pin-modal'));
+            showNotification("Local PIN changed!", 'success');
+        }
 
         // --- Run ---
         document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOMContentLoaded: Starting application setup."); // DEBUG LOG
             try {
-                loadState();
-                applyTheme();
+                loadLocalState(); // Load theme/pin first
+                applyTheme();     // Apply theme immediately
                 setupEventListeners();
-                // Show login screen
+                // Show login screen, Firebase connection happens after PIN entry
                 getEl('login-screen').classList.remove('hidden');
                 anime({ targets: getEl('login-container'), scale: [0.95, 1], opacity: [0, 1], duration: 400, easing: 'easeOutExpo' });
+                console.log("DOMContentLoaded: Login screen displayed."); // DEBUG LOG
             } catch (error) {
-                console.error("Initialization Error:", error);
-                document.body.innerHTML = `<div style="padding: 20px; text-align: center; color: red; font-family: sans-serif;">App failed to initialize. Please check the console (F12) for errors and try refreshing.</div>`;
+                console.error("Initialization Error (DOMContentLoaded):", error); // KEEP THIS
+                document.body.innerHTML = `<div style="padding: 20px; text-align: center; color: red; font-family: sans-serif;">App failed to initialize during setup. Please check the console (F12) for errors, ensure Firebase SDKs loaded, and Firebase config is correct. Try refreshing.</div>`;
             }
         });
 
     </script>
-
 </body>
 </html>
