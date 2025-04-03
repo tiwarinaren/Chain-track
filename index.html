@@ -6,28 +6,24 @@
     <title>ChainTrack - Habit Tracker</title>
 
     <!-- ## PWA & Mobile Behavior ## -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes"> <!-- Key for iOS standalone -->
+    <meta name="mobile-web-app-capable" content="yes"> <!-- Important for Android legacy "Add to Home screen" -->
+    <meta name="apple-mobile-web-app-capable" content="yes"> <!-- !! Key for iOS standalone !! -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ChainTrack">
-    <meta name="theme-color" content="#4f46e5"> <!-- Theme for Android top bar -->
+    <meta name="apple-mobile-web-app-title" content="ChainTrack"> <!-- Title shown during A2HS on iOS -->
+    <meta name="theme-color" content="#4f46e5"> <!-- Hint for browser UI theming -->
     <meta name="description" content="Build habits, forge your future.">
-   <!-- <link rel="manifest" href="manifest.json"> -->
+    <!-- <link rel="manifest" href="manifest.json"> --> <!-- Manifest link REMOVED as requested -->
 
     <!-- ## Icons ## -->
-    <!-- iOS Home Screen Icon (Use PNG) -->
+    <!-- iOS Home Screen Icon (Use PNG - Crucial for standalone icon) -->
     <link rel="apple-touch-icon" href="apple-touch-icon.png"> <!-- Point to your 180x180 or 192x192 PNG -->
 
     <!-- Standard Favicons (Browser Tabs, Bookmarks, etc.) -->
-    <link rel="icon" href="favicon.ico" sizes="any"> <!-- Traditional .ico -->
-    <link rel="icon" href="icon.svg" type="image/svg+xml"> <!-- Modern SVG icon (using a generic name) -->
-    <!-- You can also add PNG favicons if needed: -->
-    <!-- <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png"> -->
-    <!-- <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png"> -->
-
-    <!-- Android / Manifest Icons (These sizes are referenced *within* manifest.json) -->
-    <!-- The manifest.json points to Base64 SVGs in the previous version, which is fine for Android -->
-    <!-- No separate links needed here if manifest.json handles them -->
+    <link rel="icon" href="favicon.ico" sizes="any"> <!-- Optional: Traditional .ico -->
+    <link rel="icon" href="icon.svg" type="image/svg+xml"> <!-- Optional: Modern SVG icon -->
+    <!-- You can add specific PNG sizes here too if needed for older browsers -->
+    <!-- <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"> -->
+    <!-- <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"> -->
 
 
     <!-- Libraries -->
@@ -75,16 +71,14 @@
         .category-tag { font-size: 0.65rem; padding: 1px 6px; border-radius: 99px; line-height: 1; text-transform: uppercase; font-weight: 600; }
 
         /* Dark Mode */
-        /* REMOVED: html.dark { color-scheme: dark; } - Let Tailwind handle theme appearance */
         .dark .dark\:bg-gray-950 { background-color: #0c1118; }
         .dark .dark\:bg-gray-900 { background-color: #161b22; }
         .dark .dark\:bg-gray-800 { background-color: #1f2937; }
         .dark .dark\:text-gray-100 { color: #e6edf3; }
         .dark .dark\:text-gray-300 { color: #bdc6cf; }
         .dark .dark\:border-gray-700 { border-color: #30363d; }
-        /* Input styling should be more robust now without color-scheme */
         .dark input:not([type="file"]), .dark select, .dark textarea {
-            background-color: #0d1117 !important; /* Use important to override potential browser defaults */
+            background-color: #0d1117 !important;
             border-color: #30363d !important;
             color: #e6edf3 !important;
             border-radius: 6px;
@@ -110,8 +104,6 @@
         /* Toggle Switch */
         #dark-mode-toggle { transition: background-color 0.2s ease; }
         #dark-mode-toggle span:last-child { transition: transform 0.2s ease; }
-        /* Tailwind dark:bg-* handles the 'on' state in dark mode, adjust base if needed */
-        /* Use JS to set bg-indigo-600 when toggled ON (dark mode active) */
 
         /* Undo Button */
         .undo-button { transition: all 0.3s ease; }
@@ -126,13 +118,11 @@
     <div id="login-screen" class="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-700 dark:from-gray-900 dark:to-black z-50 transition-opacity duration-500">
         <div class="bg-white dark:bg-gray-900 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-500 scale-95" id="login-container">
             <div class="text-center mb-8">
-                 <div class="flex justify-center items-center mb-4 space-x-2">
-                    <!-- Using an SVG icon here for sharp rendering at scale -->
+                 <!-- Corrected Login Page Icon SVG -->
+                 <div class="flex justify-center items-center mb-4">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-16 h-16 text-indigo-600 dark:text-indigo-400">
-                      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-11h-1c-1.1 0-2 .9-2 2v1h2v-1h1v4h1c1.1 0 2-.9 2-2v-1c0-1.1-.9-2-2-2zm7 0h-1c-1.1 0-2 .9-2 2v1h2v-1h1v4h1c1.1 0 2-.9 2-2v-1c0-1.1-.9-2-2-2z"/>
-                      <path d="M0 0h24v24H0z" fill="none"/> <!-- Example path, replace with your actual chain SVG path if desired -->
-                       <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
-
+                      <path d="M0 0h24v24H0z" fill="none"/>
+                      <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
                     </svg>
                  </div>
                 <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">ChainTrack</h1>
@@ -374,7 +364,6 @@
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Dark Mode</span>
                             <button id="dark-mode-toggle" class="relative inline-flex items-center h-6 rounded-full w-11 bg-gray-200 dark:bg-gray-600">
                                 <span class="sr-only">Toggle Dark Mode</span>
-                                <!-- The span's background in dark mode is handled by Tailwind's dark: variant on the span itself if needed, or by the button's background -->
                                 <span class="inline-block w-4 h-4 transform bg-white dark:bg-gray-300 rounded-full transition"></span>
                             </button>
                         </div>
@@ -401,7 +390,6 @@
                         <div>
                             <label for="edit-habits-user-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select User</label>
                             <select id="edit-habits-user-select" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-                                <!-- Options will be dynamically updated -->
                                 <option value="user1">User 1</option>
                                 <option value="user2">User 2</option>
                             </select>
@@ -419,14 +407,12 @@
             <!-- Edit Single Habit Modal -->
             <div id="edit-habit-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-overlay p-4">
                 <div class="modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 max-w-lg w-full mx-auto max-h-[90vh] flex flex-col">
-                     <!-- Header -->
                      <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
                          <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Edit Habit</h2>
                          <button id="cancel-edit-habit-btn" class="p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
                              <i class="fas fa-times text-xl"></i>
                          </button>
                      </div>
-                     <!-- Content -->
                     <div class="flex-grow overflow-y-auto pr-2 space-y-4">
                         <div>
                             <label for="edit-habit-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Habit Name</label>
@@ -440,7 +426,6 @@
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Edit Streak Chain (Click day to toggle)</label>
                              <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Green = Completed, Gray = Missed</p>
                             <div id="edit-chain-container" class="flex flex-wrap gap-1.5 p-2 bg-gray-100 dark:bg-gray-800 rounded-md max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700">
-                                <!-- Chain days populated by JS -->
                             </div>
                         </div>
                         <div>
@@ -460,7 +445,6 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Footer -->
                     <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
                         <button id="save-edit-habit-btn" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition text-sm font-medium flex items-center space-x-1.5">
                             <i class="fas fa-save"></i><span>Save Changes</span>
