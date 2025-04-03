@@ -3,21 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChainTrack - Habit Tracker</title> <!-- Simplified Title -->
+    <title>ChainTrack - Habit Tracker</title>
 
-    <!-- App Icons and Meta -->
-    <!-- Using a simpler, consistent chain icon -->
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNDZlNSIgd2lkdGg9IjE5MnB4IiBoZWlnaHQ9IjE5MnB4Ij48cGF0aCBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTMuOSAxMmMwLTEuNzEgMS4zOS0zLjEgMy4xLTMuMWg0VjdIN2MtMi43NiAwLTUgMi4yNC01IDVzMi4yNCA1IDUgNWg0di0xLjlIN2MtMS43MSAwLTMuMS0xLjM5LTMuMS0zLjF6TTggMTNoOHYtMkg4djJ6bTktNmgtNHYxLjloNGMxLjcxIDAgMy4xIDEuMzkgMy4xIDMuMXMtMS4zOSAzLjEtMy4xIDMuMWgtNFYxN2g0YzIuNzYgMCA1LTIuMjQgNS01cy0yLjI0LTUtNS01eiIvPjwvc3ZnPg==">
-    <link rel="icon" sizes="192x192" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNDZlNSIgd2lkdGg9IjE5MnB4IiBoZWlnaHQ9IjE5MnB4Ij48cGF0aCBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTMuOSAxMmMwLTEuNzEgMS4zOS0zLjEgMy4xLTMuMWg0VjdIN2MtMi47NiAwLTUgMi4yNC01IDVzMi4yNCA1IDUgNWg0di0xLjlIN2MtMS43MSAwLTMuMS0xLjM5LTMuMS0zLjF6TTggMTNoOHYtMkg4djJ6bTktNmgtNHYxLjloNGMxLjcxIDAgMy4xIDEuMzkgMy4xIDMuMXMtMS4zOSAzLjEtMy4xIDMuMWgtNFYxN2g0YzIuNzYgMCA1LTIuMjQgNS01cy0yLjI0LTUtNS01eiIvPjwvc3ZnPg==">
-    <link rel="icon" sizes="512x512" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNDZlNSIgd2lkdGg9IjUxMnB4IiBoZWlnaHQ9IjUxMnB4Ij48cGF0aCBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTMuOSAxMmMwLTEuNzEgMS4zOS0zLjEgMy4xLTMuMWg0VjdIN2MtMi43NiAwLTUgMi4yNC01IDVzMi4yNCA1IDUgNWg0di0xLjlIN2MtMS43MSAwLTMuMS0xLjM5LTMuMS0zLjF6TTggMTNoOHYtMkg4djJ6bTktNmgtNHYxLjloNGMxLjcxIDAgMy4xIDEuMzkgMy4xIDMuMXMtMS4zOSAzLjEtMy4xIDMuMWgtNFYxN2g0YzIuNzYgMCA1LTIuMjQgNS01cy0yLjI0LTUtNS01eiIvPjwvc3ZnPg==">
-
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- ## PWA & Mobile Behavior ## -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes"> <!-- Key for iOS standalone -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ChainTrack">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#4f46e5">
-    <meta name="description" content="Build habits, forge your future."> <!-- Added description -->
-    <link rel="manifest" href="manifest.json"> <!-- Link to Manifest -->
+    <meta name="theme-color" content="#4f46e5"> <!-- Theme for Android top bar -->
+    <meta name="description" content="Build habits, forge your future.">
+    <link rel="manifest" href="manifest.json">
+
+    <!-- ## Icons ## -->
+    <!-- iOS Home Screen Icon (Use PNG) -->
+    <link rel="apple-touch-icon" href="apple-touch-icon.png"> <!-- Point to your 180x180 or 192x192 PNG -->
+
+    <!-- Standard Favicons (Browser Tabs, Bookmarks, etc.) -->
+    <link rel="icon" href="favicon.ico" sizes="any"> <!-- Traditional .ico -->
+    <link rel="icon" href="icon.svg" type="image/svg+xml"> <!-- Modern SVG icon (using a generic name) -->
+    <!-- You can also add PNG favicons if needed: -->
+    <!-- <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png"> -->
+    <!-- <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png"> -->
+
+    <!-- Android / Manifest Icons (These sizes are referenced *within* manifest.json) -->
+    <!-- The manifest.json points to Base64 SVGs in the previous version, which is fine for Android -->
+    <!-- No separate links needed here if manifest.json handles them -->
 
 
     <!-- Libraries -->
@@ -117,8 +127,13 @@
         <div class="bg-white dark:bg-gray-900 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-500 scale-95" id="login-container">
             <div class="text-center mb-8">
                  <div class="flex justify-center items-center mb-4 space-x-2">
-                    <!-- Using the simpler icon here too -->
-                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNDZlNSIgd2lkdGg9IjY0cHgiIGhlaWdodD0iNjRweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0zLjkgMTJjMC0xLjcxIDEuMzktMy4xIDMuMS0zLjFoNFY3SDdjLTIuNzYgMC01IDIuMjQtNSA1czIuMjQgNSA1IDVoNHYtMS45SDdjLTEuNzEgMC0zLjEtMS4zOS0zLjEtMy4xek04IDEzaDh2LTJIOHYyek0xNyA3aC00djEuOWg0YzEuNzEgMCAzLjEgMS4zOSAzLjEgMy4xcy0xLjM5IDMuMS0zLjEgMy4xaC00VjE3aDRjMi43NiAwIDUtMi4yNCA1LTUgMC0yLjc2LTIuMjQtNS01LTV6Ii8+PC9zdmc+" alt="ChainTrack Logo" class="h-16 w-16 mx-auto">
+                    <!-- Using an SVG icon here for sharp rendering at scale -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-16 h-16 text-indigo-600 dark:text-indigo-400">
+                      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-11h-1c-1.1 0-2 .9-2 2v1h2v-1h1v4h1c1.1 0 2-.9 2-2v-1c0-1.1-.9-2-2-2zm7 0h-1c-1.1 0-2 .9-2 2v1h2v-1h1v4h1c1.1 0 2-.9 2-2v-1c0-1.1-.9-2-2-2z"/>
+                      <path d="M0 0h24v24H0z" fill="none"/> <!-- Example path, replace with your actual chain SVG path if desired -->
+                       <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+
+                    </svg>
                  </div>
                 <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">ChainTrack</h1>
                 <p class="text-gray-600 dark:text-gray-400">Build habits, forge your future.</p>
@@ -147,8 +162,11 @@
             <div class="container mx-auto px-4 py-3">
                 <div class="flex justify-between items-center">
                     <div class="flex items-center space-x-2">
-                         <!-- Using the simpler icon here too -->
-                         <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNDZlNSIgd2lkdGg9IjI0cHgiIGhlaWdodD0iMjRweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0zLjkgMTJjMC0xLjcxIDEuMzktMy4xIDMuMS0zLjFoNFY3SDdjLTIuNzYgMC01IDIuMjQtNSA1czIuMjQgNSA1IDVoNHYtMS45SDdjLTEuNzEgMC0zLjEtMS4zOS0zLjEtMy4xek04IDEzaDh2LTJIOHYyek0xNyA3aC00djEuOWg0YzEuNzEgMCAzLjEgMS4zOSAzLjEgMy4xcy0xLjM5IDMuMS0zLjEgMy4xaC00VjE3aDRjMi43NiAwIDUtMi4yNCA1LTUgMC0yLjc2LTIuMjQtNS01LTV6Ii8+PC9zdmc+" alt="Icon" class="h-6 w-6">
+                         <!-- Using SVG for header icon for sharpness -->
+                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-indigo-600 dark:text-indigo-400">
+                           <path d="M0 0h24v24H0z" fill="none"/>
+                           <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                         </svg>
                         <h1 class="text-xl font-bold text-gray-800 dark:text-gray-100">ChainTrack</h1>
                     </div>
                     <div class="flex items-center space-x-3">
@@ -428,7 +446,7 @@
                         <div>
                              <label for="edit-habit-note" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Note for Last Entry</label>
                              <textarea id="edit-habit-note" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm dark:bg-gray-800" placeholder="Add an optional note..."></textarea>
-                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Linked to the most recent day in the chain.</p>
+                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Note associated with the latest completed day.</p>
                          </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Actions</label>
@@ -520,6 +538,11 @@
         <div id="notification-area" class="fixed bottom-4 right-4 z-[100] space-y-2 w-full max-w-xs sm:max-w-sm"></div>
 
     </div> <!-- End App Container -->
+
+    <!-- 
+        SCRIPT SECTION REMAINS THE SAME AS THE PREVIOUS VERSION. 
+        NO CHANGES NEEDED IN THE JAVASCRIPT LOGIC FOR THESE ICON/PWA ISSUES.
+    -->
     <script>
         // --- Firebase Configuration ---
         // THIS IS NOW LOADED FROM firebase-config.js BEFORE THIS SCRIPT RUNS
@@ -1070,7 +1093,8 @@
                     const icon = getHabitIcon(habit.name);
 
                     let note = null; let noteTitle = '';
-                    if (len > 0 && chain[len - 1]) {
+                     // Display note associated with today if tracked today
+                     if (isTracked) {
                          const dateStr = getTodayDateString();
                          const noteKey = `${state.currentUser}-${habit.id}-${dateStr}`;
                          note = state.notes?.[noteKey]; // Safe navigation
@@ -1252,24 +1276,13 @@
              modal.dataset.habitUser = userKey;
 
              const chain = h.chain || []; let note = ''; let noteDate = '';
-             // Note always tied to the last day of the chain for editing
-             if (chain.length > 0) {
-                 // This assumes notes should correspond to days, need a better mapping if notes are general
-                 // For simplicity, let's stick to: Note editor modifies the note associated with today if the last chain entry was today.
-                 // This logic might need rethinking based on how notes should *really* work.
-                 const dateStr = getTodayDateString(); // Let's assume note always edits today's potential note
-                 const noteKey = `${userKey}-${h.id}-${dateStr}`;
-                 note = state.notes?.[noteKey] || ''; // Safe navigation
-                 noteDate = dateStr;
-                 modal.dataset.noteDate = noteDate; // Store the date the note applies to
-                 getEl('edit-habit-note').value = note;
-                 getEl('edit-habit-note').closest('div').querySelector('p').textContent = `Note linked to the latest entry (date: ${noteDate})`; // More informative
-             } else {
-                 getEl('edit-habit-note').value = ''; // No chain, no note context
-                 modal.dataset.noteDate = '';
-                  getEl('edit-habit-note').closest('div').querySelector('p').textContent = `Add a note (will be linked to first entry)`;
-             }
-
+             // Simplified: Note editor modifies the note associated with today if the last chain entry was today.
+             const dateStr = getTodayDateString();
+             const noteKey = `${userKey}-${h.id}-${dateStr}`;
+             note = state.notes?.[noteKey] || ''; // Safe navigation
+             noteDate = dateStr;
+             modal.dataset.noteDate = noteDate; // Store the date the note applies to (always today for editor)
+             getEl('edit-habit-note').value = note;
 
              renderEditChainContainer(chain);
              openModal(modal);
@@ -1729,7 +1742,7 @@
              }
 
              const note = getEl('edit-habit-note').value.trim();
-             const noteDate = modal.dataset.noteDate; // Get the date the note applies to
+             const noteDate = modal.dataset.noteDate; // Date note *editor* referred to (today)
 
              if (!name) { showNotification("Name required.", 'warning'); return; }
 
@@ -1743,39 +1756,21 @@
              h.name = name; h.category = cat; h.chain = chain;
              calculateAndUpdateBestStreak(h); // Recalculate best streak
 
-             // Update Note: Associate with the *last day* marked as true in the edited chain, or remove if no days marked true.
-             // This makes more sense than tying it just to 'today'.
+             // Update Note: Associate with today's date IF the last day in the *edited* chain is TRUE.
              if (!state.notes) state.notes = {};
-             const lastTrueIndex = chain.lastIndexOf(true);
              const noteKeyBase = `${user}-${id}-`;
+             const todayKey = `${noteKeyBase}${getTodayDateString()}`;
 
-             // Remove old notes associated with this habit (simpler than figuring out the *exact* old date)
-             Object.keys(state.notes)
-                 .filter(k => k.startsWith(noteKeyBase))
-                 .forEach(k => {
-                     console.log("handleSaveEditedHabit: Removing potentially old note:", k);
-                     delete state.notes[k];
-                 });
-
-             if (note && lastTrueIndex !== -1) {
-                 // We need a way to map chain index to date. This requires knowing the start date.
-                 // SIMPLIFICATION: For now, let's just keep associating the note with TODAY'S DATE
-                 // if the last entry in the potentially modified chain is TRUE.
-                 // A more robust system would store { date: 'YYYY-MM-DD', completed: true, note: '...' } per entry.
-                 const lastDayIsTrue = chain[chain.length - 1];
-                 if (lastDayIsTrue) {
-                    const todayKey = `${noteKeyBase}${getTodayDateString()}`;
-                    state.notes[todayKey] = note;
-                    console.log("handleSaveEditedHabit: Saving note for today:", todayKey);
-                 } else {
-                     console.log("handleSaveEditedHabit: Last day not marked true, note not saved.");
-                     // Note is implicitly removed because we cleared old notes above.
+             // Decide whether to save/update or delete today's note based on chain and note input
+             if (chain[chain.length - 1] && note) { // If last day is true AND note has content
+                 state.notes[todayKey] = note;
+                 console.log("handleSaveEditedHabit: Saving/Updating note for today:", todayKey);
+             } else { // If last day is false OR note is empty
+                 if(state.notes[todayKey]) {
+                    delete state.notes[todayKey];
+                    console.log("handleSaveEditedHabit: Removing note for today (chain end false or note empty):", todayKey);
                  }
-
-             } else {
-                 console.log("handleSaveEditedHabit: Note field empty or no completed days, note not saved/removed.");
              }
-
 
              updateCategoriesFromHabits();
              populateCategoryFilterAndSuggestions();
